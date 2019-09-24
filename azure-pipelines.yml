@@ -12,17 +12,10 @@ pool:
 
 steps:
 - task: DotNetCoreCLI@2
-  displayName: 'Build SDK Library Targeting NetStandard2.0'
+  displayName: 'Build Solution'
   inputs:
     command: 'build'
-    configuration: '$(BuildConfiguration)'
-    projects: src/mtconnect_adapter_sdk.csproj
-- task: DotNetCoreCLI@2
-  displayName: 'Build Test Projects Targeting DotNetCore 2.2'
-  inputs:
-    command: 'build'
-    configuration: '$(BuildConfiguration)'
-    projects: test/mtconnect_adapter_sdk.utests.csproj
+    arguments: --version-suffix '$(Build.BuildId)'
 - task: DotNetCoreCLI@2
   displayName: 'Run Unit Tests'
   inputs:
