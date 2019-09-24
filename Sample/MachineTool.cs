@@ -14,21 +14,13 @@
  *    limitations under the License.
  */
 
+using MTConnect;
+using NAudio.Wave;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 
 namespace AdapterLab
 {
-    using MTConnect;
-    using NAudio;
-    using NAudio.Wave;
-
     public partial class MachineTool : Form
     {
         Adapter mAdapter = new Adapter();
