@@ -8,7 +8,7 @@ pr:
 - develop
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: 'windows-latest'
 
 steps:
 - task: DotNetCoreCLI@2
@@ -16,7 +16,6 @@ steps:
   inputs:
     command: 'build'
     configuration: '$(BuildConfiguration)'
-    arguments: --framework netstandard2.0
     projects: src/mtconnect_adapter_sdk.csproj
 - task: DotNetCoreCLI@2
   displayName: 'Build Test Projects Targeting DotNetCore 2.2'
