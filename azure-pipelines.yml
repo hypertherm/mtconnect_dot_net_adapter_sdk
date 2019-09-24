@@ -33,11 +33,13 @@ steps:
   inputs:
     command: pack
     packagesToPack: './src/mtconnect_adapter_sdk.csproj'
+    arguments: --version-suffix 'prerelease_$(Build.BuildId)'
     includesymbols: true
+    includesource: true
     outputDir: '$(Build.ArtifactStagingDirectory)'
+    verbosityPack: detailed
 - task: DotNetCoreCLI@2
   displayName: 'Publish NuGet Package to mtconnect_sdk_feed'
   inputs:
     command: 'push'
-    searchPatternPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
     feedPublish: 'mtconnect_sdk_feed'

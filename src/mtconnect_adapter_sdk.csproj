@@ -5,7 +5,7 @@
 
     <!-- Generate a NuGet package-->
     <PackageId>mtconnect_adapter_sdk</PackageId>
-    <Version>0.2.0</Version>
+    <VersionPrefix>0.2.0</VersionPrefix>
     <Authors></Authors>
     <Company></Company>
   </PropertyGroup>
