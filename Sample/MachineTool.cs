@@ -31,7 +31,7 @@ namespace AdapterLab
         Event mExec = new Event("exec");
 
         Event mProgram = new Event("program");
-        Message mMessage = new Message("message");
+        MTConnect.Message mMessage = new MTConnect.Message("message");
 
         Sample mPosition = new Sample("position");
         Sample mLoad = new Sample("load");
