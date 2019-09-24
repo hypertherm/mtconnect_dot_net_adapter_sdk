@@ -12,10 +12,13 @@ pool:
 
 steps:
 - task: DotNetCoreCLI@2
-  displayName: 'Build Solution'
+  displayName: 'Build Library and Test Projects'
   inputs:
     command: 'build'
     configuration: '$(BuildConfiguration)'
+    projects: |
+      src/mtconnect_adapter_sdk.csproj
+      test/mtconnect_adapter_sdk.utests.csproj
 - task: DotNetCoreCLI@2
   displayName: 'Run Unit Tests'
   inputs:
