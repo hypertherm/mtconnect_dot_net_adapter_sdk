@@ -28,6 +28,7 @@ steps:
   displayName: 'Run Unit Tests'
   inputs:
     command: 'test'
+    projects: '**/*.utests.csproj'
 - task: DotNetCoreCLI@2
   displayName: 'Generate NuGet Package'
   inputs:
