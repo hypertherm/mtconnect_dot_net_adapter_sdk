@@ -1,11 +1,16 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.779
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetAdapterSDK", "DotNetAdapterSDK.csproj", "{D8D08DBE-B511-4DE0-B5A9-563EBFC60C4F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NUnitTests", "NUnitTests\NUnitTests.csproj", "{429B8B5C-8483-4680-BC8D-E2792574F6A4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdapterLab", "Sample\AdapterLab.csproj", "{AD661DEE-4205-4289-9E77-E4F264809DE3}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D8D08DBE-B511-4DE0-B5A9-563EBFC60C4F} = {D8D08DBE-B511-4DE0-B5A9-563EBFC60C4F}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -50,5 +55,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {49BC6052-CF6F-4EE8-A62F-1FABE960C772}
 	EndGlobalSection
 EndGlobal
