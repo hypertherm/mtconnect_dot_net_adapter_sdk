@@ -15,7 +15,8 @@ steps:
   displayName: 'Build Solution'
   inputs:
     command: 'build'
-    arguments: --version-suffix '$(Build.BuildId)'
+    configuration: '$(BuildConfiguration)'
+    arguments: --version-suffix $(Build.BuildId)
 - task: DotNetCoreCLI@2
   displayName: 'Run Unit Tests'
   inputs:
@@ -27,7 +28,7 @@ steps:
     command: custom
     custom: pack
     projects: ./src/mtconnect_adapter_sdk.csproj
-    arguments: --configuration '$(BuildConfiguration)' --version-suffix 'prerelease-$(Build.BuildId)' --include-source
+    arguments: '--configuration $(BuildConfiguration) --version-suffix prerelease-$(Build.BuildId) --include-source'
 - task: DotNetCoreCLI@2
   displayName: 'Publish NuGet Package to mtconnect_sdk_feed'
   inputs:
