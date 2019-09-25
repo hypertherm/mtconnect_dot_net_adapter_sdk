@@ -24,8 +24,8 @@ steps:
     command: 'build'
     configuration: '$(BuildConfiguration)'
     projects: |
-      ./src/**/*.csproj
-      /test/**/*.utests.csproj
+      ./src/mtconnect_adapter_sdk.csproj
+      ./test/mtconnect_adapter_sdk.utests.csproj
     arguments: --version-suffix $(Build.BuildId) --verbosity diag
 - task: DotNetCoreCLI@2
   displayName: 'Run Unit Tests'
