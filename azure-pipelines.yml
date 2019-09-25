@@ -35,7 +35,7 @@ steps:
 - task: MSBuild@1
   displayName: 'Build Sample Project (Integration Test)'
   inputs:
-    project: sample/AdapterLab.csproj
+    solution: sample/AdapterLab.csproj
     platform: $(BuildPlatform)
     configuration: $(BuildConfiguration)
 - task: DotNetCoreCLI@2
