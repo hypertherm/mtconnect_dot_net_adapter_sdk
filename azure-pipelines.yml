@@ -1,5 +1,6 @@
 variables:
   BuildConfiguration: Release
+  BuildPlatform: any cpu
 
 trigger:
 - develop
@@ -18,16 +19,25 @@ steps:
     version: 2.2.203
     installationPath: $(Agent.ToolsDirectory)/dotnet
 - task: DotNetCoreCLI@2
-  displayName: 'Build Solution'
+  displayName: 'Build Library and UnitTests'
   inputs:
     command: 'build'
     configuration: '$(BuildConfiguration)'
+    projects: |
+      ./src/**/*.csproj
+      /test/**/*.utests.csproj
     arguments: --version-suffix $(Build.BuildId) --verbosity diag
 - task: DotNetCoreCLI@2
   displayName: 'Run Unit Tests'
   inputs:
     command: 'test'
     projects: '**/*.utests.csproj'
+- task: MSBuild@1
+  displayName: 'Build Sample Project (Integration Test)'
+  inputs:
+    project: sample/AdapterLab.csproj
+    platform: $(BuildPlatform)
+    configuration: $(BuildConfiguration)
 - task: DotNetCoreCLI@2
   displayName: 'Generate NuGet Package'
   inputs:
