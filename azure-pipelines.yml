@@ -22,7 +22,7 @@ steps:
   inputs:
     command: 'build'
     configuration: '$(BuildConfiguration)'
-    arguments: --version-suffix $(Build.BuildId)
+    arguments: --version-suffix $(Build.BuildId) --verbosity diag
 - task: DotNetCoreCLI@2
   displayName: 'Run Unit Tests'
   inputs:
