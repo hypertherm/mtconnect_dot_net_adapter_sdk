@@ -35,8 +35,7 @@ steps:
   displayName: 'Build Sample Project (Integration Test)'
   inputs:
     solution: sample/AdapterLab.csproj
-    platform: $(BuildPlatform)
-    configuration: $(BuildConfiguration)
+    msbuildArguments:  /property:Configuration=Release
 - task: DotNetCoreCLI@2
   displayName: 'Generate NuGet Package'
   inputs:
