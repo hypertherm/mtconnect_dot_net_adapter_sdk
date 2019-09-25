@@ -22,11 +22,10 @@ steps:
   displayName: 'Build Library and UnitTests'
   inputs:
     command: 'build'
-    configuration: '$(BuildConfiguration)'
     projects: |
       ./src/mtconnect_adapter_sdk.csproj
       ./test/mtconnect_adapter_sdk.utests.csproj
-    arguments: --version-suffix $(Build.BuildId) --verbosity diag
+    arguments: --configuration $(BuildConfiguration) --version-suffix $(Build.BuildId) --verbosity diag
 - task: DotNetCoreCLI@2
   displayName: 'Run Unit Tests'
   inputs:
