@@ -36,6 +36,7 @@ steps:
   inputs:
     solution: sample/AdapterLab.csproj
     msbuildArguments:  /property:Configuration=Release
+    restoreNugetPackages: true
 - task: DotNetCoreCLI@2
   displayName: 'Generate NuGet Package'
   inputs:
