@@ -1,6 +1,6 @@
 variables:
   BuildConfiguration: Release
-  BuildPlatform: any cpu
+  BuildPlatform: AnyCPU
 
 trigger:
 - develop
