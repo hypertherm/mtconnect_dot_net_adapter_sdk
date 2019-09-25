@@ -31,12 +31,15 @@ steps:
   inputs:
     command: 'test'
     projects: '**/*.utests.csproj'
+- task: NuGetCommand@2
+  displayName: 'Restore NuGet packages for Solution for Sample Project (Integration Test)'
+  inputs:
+    command: restore
 - task: MSBuild@1
   displayName: 'Build Sample Project (Integration Test)'
   inputs:
     solution: sample/AdapterLab.csproj
     msbuildArguments:  /property:Configuration=Release
-    restoreNugetPackages: true
 - task: DotNetCoreCLI@2
   displayName: 'Generate NuGet Package'
   inputs:
