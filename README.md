@@ -1,5 +1,6 @@
-Dot Net SDK
+MTConnect DotNet Adapter SDK
 ===========
+[![Build Status](https://dev.azure.com/hypertherm-controls/mtconnect_dotnet_adapter/_apis/build/status/hypertherm.mtconnect_dot_net_adapter_sdk?branchName=develop)](https://dev.azure.com/hypertherm-controls/mtconnect_dotnet_adapter/_build/latest?definitionId=49&branchName=develop)
 
 An assembly for the Microsoft .NET framework, based on the MC2 class.
 
