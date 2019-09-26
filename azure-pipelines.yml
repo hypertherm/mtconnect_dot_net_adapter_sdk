@@ -37,7 +37,7 @@ steps:
     command: custom
     custom: pack
     projects: ./src/mtconnect_adapter_sdk.csproj
-    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory) --version-suffix pr-$(Build.SourceVersion)'
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory) --version-suffix pr-$(Build.SourceVersion) --no-build'
 - task: DotNetCoreCLI@2
   displayName: 'Publish NuGet Package to mtconnect_sdk_feed'
   inputs:
