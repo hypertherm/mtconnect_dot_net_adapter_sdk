@@ -15,18 +15,17 @@
  */
 
 using System;
+using System.IO;
+using System.Text;
+using System.Threading;
+using System.Net;
+using System.Net.Sockets;
+using System.Collections;
+using System.Collections.Generic;
+using System.Xml;
 
 namespace MTConnect
 {
-    using System.IO;
-    using System.Text;
-    using System.Threading;
-    using System.Net;
-    using System.Net.Sockets;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Xml;
-
     ///<summary>
     /// Commands that can be issues to the Adapter
     /// The Commands.Device must be issued first to set the device (byname or uuid) that will be commanded

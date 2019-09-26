@@ -16,10 +16,8 @@
 
 using System;
 using System.Xml;
-using System.Xml.Serialization;
 using System.Collections;
 using System.Collections.Generic;
-
 
 namespace MTConnect
 {

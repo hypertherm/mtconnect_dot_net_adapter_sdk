@@ -1,0 +1,45 @@
+variables:
+  BuildConfiguration: Release
+  BuildPlatform: AnyCPU
+
+trigger:
+- develop
+
+pr:
+- develop
+
+pool:
+  vmImage: 'vs2015-win2012r2'
+
+steps:
+- task: UseDotNet@2
+  displayName: 'Install .NET Core sdk'
+  inputs:
+    packageType: sdk
+    version: 2.2.203
+    installationPath: $(Agent.ToolsDirectory)/dotnet
+- task: DotNetCoreCLI@2
+  displayName: 'Build Library and UnitTests'
+  inputs:
+    command: 'build'
+    projects: |
+      ./src/mtconnect_adapter_sdk.csproj
+      ./test/mtconnect_adapter_sdk.utests.csproj
+    arguments: --configuration $(BuildConfiguration) --version-suffix $(Build.BuildId) --verbosity diag
+- task: DotNetCoreCLI@2
+  displayName: 'Run Unit Tests'
+  inputs:
+    command: 'test'
+    projects: '**/*.utests.csproj'
+- task: DotNetCoreCLI@2
+  displayName: 'Generate NuGet Package'
+  inputs:
+    command: custom
+    custom: pack
+    projects: ./src/mtconnect_adapter_sdk.csproj
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory) --version-suffix pr-$(Build.SourceVersion)'
+- task: DotNetCoreCLI@2
+  displayName: 'Publish NuGet Package to mtconnect_sdk_feed'
+  inputs:
+    command: 'push'
+    feedPublish: 'mtconnect_sdk_feed'
