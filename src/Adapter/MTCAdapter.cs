@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using System.Xml;
 using MTConnect.Adapter.Providers.TcpClient;
 using MTConnect.Adapter.Providers.TcpListener;
+using MTConnect.Asset;
 
 namespace MTConnect.Adapter
 {
@@ -306,7 +307,7 @@ namespace MTConnect.Adapter
         /// Send a new asset to the Agent
         /// </summary>
         /// <param name="asset">The asset</param>
-        public void AddAsset(Asset asset)
+        public void AddAsset(IAsset asset)
         {
             UTF8Encoding encoder = new UTF8Encoding();
             StringBuilder result = new StringBuilder();

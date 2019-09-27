@@ -17,7 +17,7 @@
 using System;
 using System.Xml;
 using System.Collections.Generic;
-using MTConnect;
+using MTConnect.Asset;
 
 namespace AdapterLab
 {
@@ -25,7 +25,7 @@ namespace AdapterLab
     /// <summary>
     /// An abstraction around an XML Generator for a cutting tool asset
     /// </summary>
-    public class CuttingTool : Asset
+    public class CuttingTool : IAsset
     {
         public const double CT_NULL = Double.NaN;
         /// <summary>
