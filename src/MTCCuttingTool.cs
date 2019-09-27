@@ -64,16 +64,16 @@ namespace MTConnect
 
             public string Name { set; get; }
             public string Value { set; get; }
-            public ArrayList mAttributes;
+            public List<Attribute> mAttributes;
 
-            public Property(string name, Attribute[] arguments = null, string value = null)
+            public Property(string name, IList<Attribute> arguments = null, string value = null)
             {
                 Name = name;
                 Value = value;
                 if (arguments != null)
                 {
-                    mAttributes = new ArrayList();
-                    mAttributes = new ArrayList(arguments);
+                    mAttributes = new List<Attribute>(arguments);
+                    
                 }
             }
 
@@ -82,9 +82,11 @@ namespace MTConnect
                 Name = name;
                 if (arguments != null)
                 {
-                    mAttributes = new ArrayList();
+                    mAttributes = new List<Attribute>();
                     for (int i = 0; i < arguments.Length; i += 2)
+                    {
                         mAttributes.Add(new Attribute(arguments[i], arguments[i + 1]));
+                    }
                 }
                 Value = value;
             }
@@ -101,7 +103,7 @@ namespace MTConnect
             /// <param name="argument">The argumnet</param>
             public void AddAttribute(Attribute argument)
             {
-                if (mAttributes == null) mAttributes = new ArrayList();
+                if (mAttributes == null) mAttributes = new List<Attribute>();
                 mAttributes.Add(argument);
             }
 
@@ -350,7 +352,7 @@ namespace MTConnect
 
         protected HashSet<Property> mProperties = new HashSet<Property>();
         protected HashSet<Measurement> mMeasurements = new HashSet<Measurement>();
-        protected ArrayList mItems = new ArrayList();
+        protected List<CuttingItem> mItems = new List<CuttingItem>();
 
         /// <summary>
         /// Creates a new cutting tool asset

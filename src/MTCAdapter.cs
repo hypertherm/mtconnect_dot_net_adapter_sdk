@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright Copyright 2012, System Insights, Inc.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,7 +74,7 @@ namespace MTConnect
         /// <summary>
         /// A list of all the client connections.
         /// </summary>
-        private ArrayList mClients = new ArrayList();
+        private List<Stream> mClients = new List<Stream>();
 
         /// <summary>
         /// A count of client threads.
@@ -99,7 +99,7 @@ namespace MTConnect
         /// <summary>
         /// All the data items we're tracking.
         /// </summary>
-        private ArrayList mDataItems = new ArrayList();
+        private List<DataItem> mDataItems = new List<DataItem>();
 
         /// <summary>
         /// The heartbeat interval.
@@ -247,7 +247,7 @@ namespace MTConnect
             if (Verbose)
                 Console.WriteLine("Sending: " + commandLine);
 
-            foreach (Stream client in mClients.ToArray())
+            foreach (Stream client in mClients)
             {
                 lock (client)
                 {
@@ -407,7 +407,7 @@ namespace MTConnect
             byte[] message = mEncoder.GetBytes(line.ToCharArray());
             if (Verbose)
                 Console.WriteLine("Sending: " + line);
-            foreach (Stream client in mClients.ToArray())
+            foreach (Stream client in mClients)
             {
                 lock (client)
                 {
@@ -478,7 +478,7 @@ namespace MTConnect
             TcpClient tcpClient = (TcpClient)client;
             NetworkStream clientStream = tcpClient.GetStream();
             mClients.Add(clientStream);
-            ArrayList readList = new ArrayList();
+            List<Socket> readList = new List<Socket>();
             bool heartbeatActive = false;
 
             byte[] message = new byte[4096];
