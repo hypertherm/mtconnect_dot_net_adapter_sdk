@@ -13,29 +13,49 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-
-using MTConnect;
+using MTConnect.Adapter;
+using Moq;
+using MTConnect.Adapter.Providers.TcpClient;
+using MTConnect.Adapter.Providers.TcpListener;
 using NUnit.Framework;
-using System;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.IO;
 
-namespace NUnit.AdapterLabTests
+namespace MTConnect.utests.Adapter
 {
-
     [TestFixture]
-    public class AdapterTests
+    public class MTCAdapterTests : MTCAdapter
     {
-        Adapter adapter;
         ASCIIEncoding encoder = new ASCIIEncoding();
         Stream stream;
+
+        private Mock<TcpClientProvider> _mockTcpClientProvider;
+        private Mock<TcpListenerProvider> _mockTcpListenerProvider;
+
+        public MTCAdapterTests() : base()
+        {
+            _mockTcpListenerProvider = new Mock<TcpListenerProvider>();
+            _mockTcpClientProvider = new Mock<TcpClientProvider>();
+            _mockTcpClientProvider.Setup(c => c.Client).Returns(new Socket(SocketType.Stream, ProtocolType.Tcp));
+            _mockTcpClientProvider.Setup(c => c.GetStream()).Returns(new MemoryStream());
+            _mockTcpListenerProvider.Setup(p => p.LocalEndpoint).Returns(new IPEndPoint(IPAddress.Any, 12367));
+            _mockTcpListenerProvider.Setup(p => p.AcceptTcpClient()).Returns(_mockTcpClientProvider.Object);
+
+            _tcpListener = _mockTcpListenerProvider.Object;
+
+            Heartbeat = 1;
+        }
+
+        private MTCAdapter adapter;
 
         [SetUp]
         public void initialize()
         {
             stream = new MemoryStream(2048);
-            adapter = new Adapter(0);
+            adapter = new MTCAdapterTests();
             adapter.Start();
             while (!adapter.Running) Thread.Sleep(10);
         }
@@ -65,7 +85,7 @@ namespace NUnit.AdapterLabTests
             byte[] buffer = new byte[1024];
             int count = stream.Read(buffer, 0, 1024);
 
-            String line = encoder.GetString(buffer, 0, count);
+            string line = encoder.GetString(buffer, 0, count);
             Assert.IsTrue(line.EndsWith("avail|AVAILABLE\n"));
         }
 
@@ -112,7 +132,7 @@ namespace NUnit.AdapterLabTests
             byte[] buffer = new byte[1024];
             int count = stream.Read(buffer, 0, 1024);
 
-            String line = encoder.GetString(buffer, 0, count);
+            string line = encoder.GetString(buffer, 0, count);
             Assert.IsTrue(line.EndsWith("avail|AVAILABLE|estop|ARMED\n"));
         }
 
@@ -135,7 +155,7 @@ namespace NUnit.AdapterLabTests
             byte[] buffer = new byte[1024];
             int count = stream.Read(buffer, 0, 1024);
 
-            String s = encoder.GetString(buffer, 0, count);
+            string s = encoder.GetString(buffer, 0, count);
             string[] lines = s.Split('\n');
             Assert.AreEqual(3, lines.Length);
             Assert.IsTrue(lines[0].EndsWith("avail|AVAILABLE"));
@@ -165,7 +185,7 @@ namespace NUnit.AdapterLabTests
             stream.Seek(pos, SeekOrigin.Begin);
             byte[] buffer = new byte[1024];
             int count = stream.Read(buffer, 0, 1024);
-            String line = encoder.GetString(buffer, 0, count);
+            string line = encoder.GetString(buffer, 0, count);
             Assert.IsTrue(line.EndsWith("cond|FAULT|111|||A Fault\n"));
         }
 
@@ -194,7 +214,7 @@ namespace NUnit.AdapterLabTests
             stream.Seek(pos, SeekOrigin.Begin);
             byte[] buffer = new byte[1024];
             int count = stream.Read(buffer, 0, 1024);
-            String line = encoder.GetString(buffer, 0, count);
+            string line = encoder.GetString(buffer, 0, count);
             Assert.IsTrue(line.EndsWith("cond|NORMAL||||\n"));
         }
 
@@ -225,7 +245,7 @@ namespace NUnit.AdapterLabTests
             stream.Seek(pos, SeekOrigin.Begin);
             byte[] buffer = new byte[1024];
             int count = stream.Read(buffer, 0, 1024);
-            String line = encoder.GetString(buffer, 0, count);
+            string line = encoder.GetString(buffer, 0, count);
             Assert.IsTrue(line.EndsWith("cond|NORMAL|111|||\n"));
         }
 
@@ -259,7 +279,7 @@ namespace NUnit.AdapterLabTests
             stream.Seek(pos, SeekOrigin.Begin);
             byte[] buffer = new byte[1024];
             int count = stream.Read(buffer, 0, 1024);
-            String line = encoder.GetString(buffer, 0, count);
+            string line = encoder.GetString(buffer, 0, count);
             Assert.IsTrue(line.EndsWith("cond|NORMAL||||\n"));
         }
 
@@ -314,7 +334,7 @@ namespace NUnit.AdapterLabTests
             stream.Seek(pos, SeekOrigin.Begin);
             byte[] buffer = new byte[1024];
             int count = stream.Read(buffer, 0, 1024);
-            String line = encoder.GetString(buffer, 0, count);
+            string line = encoder.GetString(buffer, 0, count);
             Assert.IsTrue(line.EndsWith("cond|NORMAL||||\n"));
         }
 
@@ -345,35 +365,8 @@ namespace NUnit.AdapterLabTests
             stream.Seek(pos, SeekOrigin.Begin);
             byte[] buffer = new byte[1024];
             int count = stream.Read(buffer, 0, 1024);
-            String line = encoder.GetString(buffer, 0, count);
+            string line = encoder.GetString(buffer, 0, count);
             Assert.IsTrue(line.EndsWith("cond|NORMAL|111|||\n"));
-        }
-
-        [Test]
-        public void should_send_cutting_tool()
-        {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
-            adapter.SendChanged();
-
-            adapter.addClientStream(stream);
-            long pos = stream.Position;
-
-            CuttingTool tool = new CuttingTool("12345", "AAAA", "12345");
-            tool.Description = "A tool description";
-            tool.AddProperty("ProcessSpindleSpeed",
-                            new string[] { "minimum", "1000", "maximum", "10000", },
-                            "2500");
-            tool.AddStatus(new string[] { "USED", "MEASURED" });
-
-            adapter.AddAsset(tool);
-
-            stream.Seek(pos, SeekOrigin.Begin);
-            byte[] buffer = new byte[1024];
-            int count = stream.Read(buffer, 0, 1024);
-            String line = encoder.GetString(buffer, 0, count);
-            Assert.IsTrue(line.EndsWith("|@ASSET@|12345|CuttingTool|--multiline--ABCD\n<CuttingTool toolId=\"AAAA\" serialNumber=\"12345\" assetId=\"12345\"><Description>A tool description</Description><CuttingToolLifeCycle><ProcessSpindleSpeed minimum=\"1000\" maximum=\"10000\">2500</ProcessSpindleSpeed><CutterStatus><Status>USED</Status><Status>MEASURED</Status></CutterStatus></CuttingToolLifeCycle></CuttingTool>\n--multiline--ABCD\n"));
         }
     }
 }

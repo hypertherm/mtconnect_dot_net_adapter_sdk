@@ -20,11 +20,12 @@ using System.Text;
 using System.Threading;
 using System.Net;
 using System.Net.Sockets;
-using System.Collections;
 using System.Collections.Generic;
 using System.Xml;
+using MTConnect.Adapter.Providers.TcpClient;
+using MTConnect.Adapter.Providers.TcpListener;
 
-namespace MTConnect
+namespace MTConnect.Adapter
 {
     ///<summary>
     /// Commands that can be issues to the Adapter
@@ -49,10 +50,10 @@ namespace MTConnect
     /// <summary>
     /// An MTConnect adapter
     /// </summary>
-    public class Adapter
+    public class MTCAdapter
     {
-        private IList<Tuple<MTConnectDeviceCommand, string>> _commandsToSendOnConnect;
-        private static Dictionary<MTConnectDeviceCommand, string> _commandConverter = new Dictionary<MTConnectDeviceCommand, string>
+        protected IList<Tuple<MTConnectDeviceCommand, string>> _commandsToSendOnConnect;
+        protected static Dictionary<MTConnectDeviceCommand, string> _commandConverter = new Dictionary<MTConnectDeviceCommand, string>
         {
             { MTConnectDeviceCommand.Manufacturer, "manufacturer" },
             { MTConnectDeviceCommand.Station, "station" },
@@ -69,27 +70,27 @@ namespace MTConnect
         /// <summary>
         /// The listening thread for new connections
         /// </summary>
-        private Thread mListenThread;
+        protected Thread mListenThread;
 
         /// <summary>
         /// A list of all the client connections.
         /// </summary>
-        private List<Stream> mClients = new List<Stream>();
+        protected List<Stream> mClients;
 
         /// <summary>
         /// A count of client threads.
         /// </summary>
-        private CountdownEvent mActiveClients = new CountdownEvent(1);
+        protected CountdownEvent mActiveClients;
 
         /// <summary>
         /// A flag to indicate the adapter is still running.
         /// </summary>
-        private bool mRunning = false;
+        protected bool mRunning = false;
 
         /// <summary>
         /// The server socket.
         /// </summary>
-        private TcpListener mListener;
+        protected TcpListenerProvider _tcpListener;
 
         /// <summary>
         /// The * PONG ... text
@@ -99,7 +100,7 @@ namespace MTConnect
         /// <summary>
         /// All the data items we're tracking.
         /// </summary>
-        private List<DataItem> mDataItems = new List<DataItem>();
+        protected List<DataItem> mDataItems = new List<DataItem>();
 
         /// <summary>
         /// The heartbeat interval.
@@ -131,46 +132,33 @@ namespace MTConnect
         }
 
         /// <summary>
-        /// The port the adapter will be listening on.
-        /// </summary>
-        private int mPort;
-
-        /// <summary>
-        /// The Port property to set and get the mPort. This will only 
-        /// take affect when the adapter is stopped.
-        /// </summary>
-        public int Port
-        {
-            get { return mPort; }
-            set { mPort = value; }
-        }
-
-        /// <summary>
         /// Indicates if the adapter is currently running.
         /// </summary>
-        public bool Running { get { return mRunning; } }
+        public bool Running => mRunning;
 
 
         /// <summary>
         /// Get the current local bound server port. Used for testing when port 
         /// # is 0.
         /// </summary>
-        public int ServerPort
-        {
-            get { return ((IPEndPoint)mListener.LocalEndpoint).Port; }
-        }
+        public int ServerPort => ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
+
 
         /// <summary>
         /// Create an adapter. Defaults the heartbeat to 10 seconds and the 
         /// port to 7878
         /// </summary>
         /// <param name="aPort">The optional port number (default: 7878)</param>
-        public Adapter(int aPort = 7878, bool verbose = false)
+        public MTCAdapter(int aPort = 7878, bool verbose = false) : this(new SystemTcpListenerProvider(IPAddress.Any, aPort), verbose) { }
+
+        protected MTCAdapter(TcpListenerProvider tcpListenerProvider, bool verbose)
         {
-            mPort = aPort;
+            _tcpListener = tcpListenerProvider;
             _commandsToSendOnConnect = new List<Tuple<MTConnectDeviceCommand, string>>();
             Heartbeat = 10000;
             Verbose = verbose;
+            mClients = new List<Stream>();
+            mActiveClients = new CountdownEvent(1);
         }
 
         /// <summary>
@@ -365,7 +353,7 @@ namespace MTConnect
             {
                 List<DataItem> together = new List<DataItem>();
                 List<DataItem> separate = new List<DataItem>();
-                foreach (DataItem di in mDataItems)
+                foreach (DataItem di in mDataItems.ToArray())
                 {
                     List<DataItem> list = di.ItemList(true);
                     if (di.NewLine)
@@ -421,7 +409,7 @@ namespace MTConnect
         /// </summary>
         /// <param name="aClient">The client who sent the text</param>
         /// <param name="aLine">The line of text</param>
-        private bool Receive(Stream aClient, String aLine)
+        protected bool Receive(Stream aClient, String aLine)
         {
             bool heartbeat = false;
             if (aLine.StartsWith("* PING") && mHeartbeat > 0)
@@ -445,7 +433,7 @@ namespace MTConnect
         /// </summary>
         /// <param name="aClient">The client to send the message to</param>
         /// <param name="aMessage">The message</param>
-        private void WriteToClient(Stream aClient, byte[] aMessage)
+        protected void WriteToClient(Stream aClient, byte[] aMessage)
         {
             try
             {
@@ -472,11 +460,11 @@ namespace MTConnect
         /// enforcing the timeout. 
         /// </summary>
         /// <param name="client">The client we are communicating with.</param>
-        private void HeartbeatClient(object client)
+        protected void HeartbeatClient(object obj)
         {
             mActiveClients.AddCount();
-            TcpClient tcpClient = (TcpClient)client;
-            NetworkStream clientStream = tcpClient.GetStream();
+            TcpClientProvider client = (TcpClientProvider) obj;
+            Stream clientStream = client.GetStream();
             mClients.Add(clientStream);
             List<Socket> readList = new List<Socket>();
             bool heartbeatActive = false;
@@ -487,14 +475,14 @@ namespace MTConnect
 
             try
             {
-                while (mRunning && tcpClient.Connected)
+                while (mRunning && client.Connected)
                 {
                     int bytesRead = 0;
 
                     try
                     {
                         readList.Clear();
-                        readList.Add(tcpClient.Client);
+                        readList.Add(client.Client);
                         if (mHeartbeat > 0 && heartbeatActive)
                             Socket.Select(readList, null, null, mHeartbeat * 2000);
                         if (readList.Count == 0 && heartbeatActive)
@@ -555,7 +543,7 @@ namespace MTConnect
                 try
                 {
                     mClients.Remove(clientStream);
-                    tcpClient.Close();
+                    client.Close();
                 }
                 catch (Exception e)
                 {
@@ -569,7 +557,7 @@ namespace MTConnect
         /// The is the socket server listening thread. Creats a new client and 
         /// starts a heartbeat client thread to implement the ping/pong protocol.
         /// </summary>
-        private void ListenForClients()
+        protected void ListenForClients()
         {
             mRunning = true;
 
@@ -578,7 +566,7 @@ namespace MTConnect
                 while (mRunning)
                 {
                     //blocks until a client has connected to the server
-                    TcpClient client = mListener.AcceptTcpClient();
+                    TcpClientProvider client = _tcpListener.AcceptTcpClient();
                     
                     //create a thread to handle communication 
                     //with connected client
@@ -601,7 +589,7 @@ namespace MTConnect
             finally
             {
                 mRunning = false;
-                mListener.Stop();
+                _tcpListener.Stop();
             }
         }
 
@@ -611,8 +599,7 @@ namespace MTConnect
         public void Start()
         {
             if (!mRunning) {
-                mListener = new TcpListener(IPAddress.Any, mPort);
-                mListener.Start();
+                _tcpListener.Start();
                 mListenThread = new Thread(new ThreadStart(ListenForClients));
                 mListenThread.Start();
             }

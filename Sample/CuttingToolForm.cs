@@ -26,12 +26,13 @@ using System.Windows.Forms;
 namespace AdapterLab
 {
     using MTConnect;
+    using MTConnect.Adapter;
 
     public partial class CuttingToolForm : Form
     {
-        Adapter mAdapter;
+        MTCAdapter mAdapter;
 
-        public CuttingToolForm(Adapter adapter)
+        public CuttingToolForm(MTCAdapter adapter)
         {
             InitializeComponent();
             mAdapter = adapter;
@@ -56,15 +57,15 @@ namespace AdapterLab
                 status.Add("BROKEN");
             tool.AddStatus(status.ToArray());
 
-            MTConnect.CuttingTool.LifeType type = MTConnect.CuttingTool.LifeType.MINUTES;
+            CuttingTool.LifeType type = CuttingTool.LifeType.MINUTES;
             if (lifeType.Text == "PART_COUNT")
-                type = MTConnect.CuttingTool.LifeType.PART_COUNT;
+                type = CuttingTool.LifeType.PART_COUNT;
             else if (lifeType.Text == "WEAR")
-                type = MTConnect.CuttingTool.LifeType.WEAR;
+                type = CuttingTool.LifeType.WEAR;
 
-            MTConnect.CuttingTool.Direction dir = MTConnect.CuttingTool.Direction.UP;
+            CuttingTool.Direction dir = CuttingTool.Direction.UP;
             if (lifeDirection.Text == "DOWN")
-                dir = MTConnect.CuttingTool.Direction.DOWN;
+                dir = CuttingTool.Direction.DOWN;
 
             tool.AddLife(type, dir, lifeValue.Text, lifeInitial.Text, lifeLimit.Text);
 

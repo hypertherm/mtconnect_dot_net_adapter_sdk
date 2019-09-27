@@ -21,21 +21,12 @@ namespace MTConnect
     /// <summary>
     /// Abstract Asset class.
     /// </summary>
-    abstract public class Asset
+    public interface Asset
     {
-        public string AssetId { set; get; }
+        string AssetId { get; }
 
-        public Asset(string id)
-        {
-            AssetId = id;
-        }
+        XmlWriter ToXml(XmlWriter writer);
 
-        public virtual XmlWriter ToXml(XmlWriter writer)
-        {
-            writer.WriteAttributeString("assetId", AssetId);
-            return writer;
-        }
-
-        abstract public string GetMTCType();
+        string GetMTCType();
     }
 }
