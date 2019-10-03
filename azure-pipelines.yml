@@ -16,7 +16,7 @@ pool:
 
 steps:
 - bash: |
-    if [$(Build.SourceBranchName) == "master"]; then
+    if [$(Build.SourceBranchName) == "master"]; then :
     elif [$(Build.SourceBranchName) == "develop"]; then
       echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackageDevelopSuffix)'
     else
