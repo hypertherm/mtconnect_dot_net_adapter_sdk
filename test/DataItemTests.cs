@@ -16,7 +16,7 @@
 using MTConnect;
 using NUnit.Framework;
 
-namespace NUnit.AdapterLabTests
+namespace MTConnect.utests
 {
     [TestFixture]
     public class DataItemTests

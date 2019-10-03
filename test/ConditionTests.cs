@@ -14,11 +14,10 @@
  *    limitations under the License.
  */
 
-using MTConnect;
 using NUnit.Framework;
 using System.Collections.Generic;
 
-namespace NUnit.AdapterLabTests
+namespace MTConnect.utests
 {
 
     [TestFixture]

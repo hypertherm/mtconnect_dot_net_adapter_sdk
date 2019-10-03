@@ -15,6 +15,7 @@
  */
 
 using MTConnect;
+using MTConnect.Adapter;
 using NAudio.Wave;
 using System;
 using System.Windows.Forms;
@@ -23,7 +24,7 @@ namespace AdapterLab
 {
     public partial class MachineTool : Form
     {
-        Adapter mAdapter = new Adapter();
+        MTCAdapter mAdapter = new MTCAdapter();
         Event mAvail = new Event("avail");
         Event mEStop = new Event("estop");
 
@@ -89,7 +90,6 @@ namespace AdapterLab
         private void start_Click(object sender, EventArgs e)
         {
             // Start the adapter lib with the port number in the text box
-            mAdapter.Port = Convert.ToInt32(port.Text);
             mAdapter.Start();
 
             // Disable start and enable stop.

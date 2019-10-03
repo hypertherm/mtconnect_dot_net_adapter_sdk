@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <!-- Common -->
@@ -28,9 +28,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="mtconnect_adapter_sdk">
-      <HintPath>..\src\bin\$(Configuration)\net45\mtconnect_adapter_sdk.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -56,6 +53,7 @@
     <Compile Include="MachineTool.Designer.cs">
       <DependentUpon>MachineTool.cs</DependentUpon>
     </Compile>
+    <Compile Include="CuttingTool.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="CuttingToolForm.resx">
@@ -90,6 +88,12 @@
     <PackageReference Include="NAudio">
       <Version>1.9.0</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\mtconnect_adapter_sdk.csproj">
+      <Project>{80fb2820-86e2-4a87-9565-ed0227e54e7a}</Project>
+      <Name>mtconnect_adapter_sdk</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
