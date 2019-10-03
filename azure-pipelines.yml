@@ -1,6 +1,9 @@
 variables:
   BuildConfiguration: Release
   BuildPlatform: AnyCPU
+  NuGetPackageSuffix: ''
+  NuGetPackageDevelopSuffix: -prerelease
+  NuGetPackagePRSuffix: 'pr$(System.PullRequest.PullRequestNumber)-$(Build.BuildNumber)-$(Build.SourceVersion)'
 
 trigger:
 - develop
@@ -12,6 +15,14 @@ pool:
   vmImage: 'vs2015-win2012r2'
 
 steps:
+- bash: |
+    if [$(Build.SourceBranchName) == "master"]; then :
+    elif [$(Build.SourceBranchName) == "develop"]; then
+      echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackageDevelopSuffix)'
+    else
+      echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackagePRSuffix)'
+    fi
+  displayName: 'Update NuGet Package Suffix'
 - task: UseDotNet@2
   displayName: 'Install .NET Core sdk'
   inputs:
@@ -37,7 +48,7 @@ steps:
     command: custom
     custom: pack
     projects: ./src/mtconnect_adapter_sdk.csproj
-    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory) --version-suffix pr-$(Build.SourceVersion) --no-build'
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory) --version-suffix $(NuGetPackageSuffix) --no-build'
 - task: DotNetCoreCLI@2
   displayName: 'Publish NuGet Package to mtconnect_sdk_feed'
   inputs:
