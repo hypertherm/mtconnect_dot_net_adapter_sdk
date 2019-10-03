@@ -3,7 +3,7 @@ variables:
   BuildPlatform: AnyCPU
   NuGetPackageSuffix: ''
   NuGetPackageDevelopSuffix: -prerelease
-  NuGetPackagePRSuffix: '-pr-$(Build.SourceVersion)'
+  NuGetPackagePRSuffix: 'pr-$(Build.SourceVersion)'
 
 trigger:
 - develop
