@@ -32,7 +32,7 @@ steps:
     echo 'Source Branch Name: $(Build.SourceBranch)'
     echo 'Commit Hash: $(Build.SourceVersion)'
     echo '================ Commit Message ==============='
-    echo '$(Build.SourceVersionMessage)
+    echo '$(Build.SourceVersionMessage)'
     echo '============== End Commit Message ============='
     echo 'PR Number: $(System.PullRequest.PullRequestNumber)'
     echo '------------- Build Information ---------------'
