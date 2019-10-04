@@ -27,21 +27,25 @@ steps:
     echo 'OS: $(Agent.OS)'
     echo 'Build Directory: $(Agent.BuildDirectory)'
     echo 'Home Directory: $(Agent.HomeDirectory)'
-    echo '----------- Build information -----------'
+    echo '------------ Trigger Information --------------'
     echo 'Build Reason: $(Build.Reason)'
-    echo 'Source Branch Name: $(Build.SourceBranchName)'
+    echo 'Source Branch Name: $(Build.SourceBranch)'
     echo 'Commit Hash: $(Build.SourceVersion)'
+    echo '================ Commit Message ==============='
+    echo '$(Build.SourceVersionMessage)
+    echo '============== End Commit Message ============='
     echo 'PR Number: $(System.PullRequest.PullRequestNumber)'
+    echo '------------- Build Information ---------------'
     echo 'Artifact staging directory: $(Build.ArtifactStagingDirectory)'
   displayName: 'Log Variables of Interest'
 - bash: |
-    if [$(Build.Reason) == "Manual"]; then
+    if ["$(Build.Reason)" = "Manual"]; then
       echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackageManualSuffix)'
-    elif [$(Build.Reason) == "PullRequest"]; then
+    elif ["$(Build.Reason)" = "PullRequest"]; then
       echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackagePRSuffix)'
-    elif [$(Build.Reason) == "IndividualCI"]; then
-      if [$(Build.SourceBranchName) == "master"]; then :
-      elif [$(Build.SourceBranchName) == "develop"]; then
+    elif ["$(Build.Reason)" = "IndividualCI"]; then
+      if ["$(Build.SourceBranchName)" = "master"]; then :
+      elif ["$(Build.SourceBranchName)" = "develop"]; then
         echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackageDevelopSuffix)'
       else
         echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackageUnknownCISuffix)'
@@ -49,6 +53,9 @@ steps:
     else
       echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackageUnknownSuffix)'
     fi
+    echo '-----------------------------------------------'
+    echo 'NuGetPackageSuffix Value: $(NuGetPackageSuffix)'
+    echo '-----------------------------------------------'
   displayName: 'Update NuGet Package Suffix'
 - task: UseDotNet@2
   displayName: 'Install .NET Core sdk'
