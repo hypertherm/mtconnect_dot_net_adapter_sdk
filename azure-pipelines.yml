@@ -35,7 +35,7 @@ steps:
     echo 'Artifact staging directory: $(Build.ArtifactStagingDirectory)'
   displayName: 'Log Variables of Interest'
 - bash: |
-    if [$(Build.Reason) == "Manual")]; then
+    if [$(Build.Reason) == "Manual"]; then
       echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackageManualSuffix)'
     elif [$(Build.Reason) == "PullRequest"]; then
       echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackagePRSuffix)'
