@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using System.Xml;
 using MTConnect.Adapter.Providers.TcpClient;
 using MTConnect.Adapter.Providers.TcpListener;
+using MTConnect.DataElements;
 
 namespace MTConnect.Adapter
 {
