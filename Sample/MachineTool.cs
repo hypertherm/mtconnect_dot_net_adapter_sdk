@@ -14,8 +14,8 @@
  *    limitations under the License.
  */
 
-using MTConnect;
 using MTConnect.Adapter;
+using MTConnect.DataElements;
 using NAudio.Wave;
 using System;
 using System.Windows.Forms;
@@ -32,7 +32,7 @@ namespace AdapterLab
         Event mExec = new Event("exec");
 
         Event mProgram = new Event("program");
-        MTConnect.Message mMessage = new MTConnect.Message("message");
+        MTConnect.DataElements.Message mMessage = new MTConnect.DataElements.Message("message");
 
         Sample mPosition = new Sample("position");
         Sample mLoad = new Sample("load");

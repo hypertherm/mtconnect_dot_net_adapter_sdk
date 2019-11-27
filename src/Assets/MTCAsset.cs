@@ -16,7 +16,7 @@
 
 using System.Xml;
 
-namespace MTConnect
+namespace MTConnect.Assets
 {
     /// <summary>
     /// Abstract Asset class.
