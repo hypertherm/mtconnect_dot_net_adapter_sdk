@@ -17,6 +17,7 @@ namespace MTConnect.utests.Adapter.TcpListener
         public void AcceptClientTcpClientResolves()
         {
             var uut = new SystemTcpListenerProvider(IPAddress.Any, 5534);
+            uut.Start();
 
             Task.Run(() =>
                 {
@@ -32,36 +33,7 @@ namespace MTConnect.utests.Adapter.TcpListener
             };
             
             a.Should().NotThrow();
-        }
-
-        [Test]
-        public void MultipleCallsToAcceptTcpClientDoNotTryStartMultipleTimes()
-        {
-            var uut = new SystemTcpListenerProvider(IPAddress.Any, 5534);
-            
-            Task.Run(() =>
-                {
-                    HttpClient httpClient = new HttpClient();
-                    httpClient.GetAsync("http://localhost:5534");
-                }
-             );
-
-            Task.Run(() =>
-            {
-                HttpClient httpClient = new HttpClient();
-                httpClient.GetAsync("http://localhost:5534");
-            }
-             );
-            Action a = () => {
-                SystemTcpClient c1;
-                SystemTcpClient c2;
-
-                c1 = (SystemTcpClient)uut.AcceptTcpClient();
-                c2 = (SystemTcpClient)uut.AcceptTcpClient();
-                c1.Should().NotBeNull();
-                c2.Should().NotBeNull();
-            };
-            a.Should().NotThrow<SocketException>("Start() method should only be called once.");
+            uut.Stop();
         }
     }
 }

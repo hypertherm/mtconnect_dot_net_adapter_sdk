@@ -8,14 +8,9 @@ namespace MTConnect.Adapter.Providers.TcpListener
     {
         public SystemTcpListenerProvider(IPAddress ipAddress, int port) : base(ipAddress, port)
         { }
-        
+
         public new TcpClientProvider AcceptTcpClient()
         {
-            if (!Active)
-            {
-                Start();
-            }
-
             return  new SystemTcpClient(base.AcceptTcpClient());
         }
     }
