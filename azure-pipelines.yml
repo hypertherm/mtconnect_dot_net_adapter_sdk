@@ -1,35 +1,91 @@
 variables:
   BuildConfiguration: Release
+  BuildPlatform: AnyCPU
+  NuGetPackageSuffix: ''
+  NuGetPackageDevelopSuffix: 'prerelease'
+  NuGetPackageManualSuffix: 'manual-$(Build.SourceVersion)'
+  NuGetPackagePRSuffix: 'pr$(System.PullRequest.PullRequestNumber)-$(Build.BuildNumber)-$(Build.SourceVersion)'
+  NuGetPackageUnknownCISuffix: 'CI-unknown-$(Build.SourceVersion)'
+  NuGetPackageUnknownSuffix: 'UNKNOWN-$(Build.SourceVersion)'
 
 trigger:
-- develop
+  branches:
+    include:
+      - master
+      - develop
 
 pr:
 - develop
+- master
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: 'vs2015-win2012r2'
 
 steps:
+- bash: |
+    if [ "$(Build.Reason)" = "Manual" ]; then
+      echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackageManualSuffix)'
+    elif [ "$(Build.Reason)" = "PullRequest" ]; then
+      echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackagePRSuffix)'
+    elif [ "$(Build.Reason)" = "IndividualCI" ]; then
+      if [ "$(Build.SourceBranchName)" = "master" ]; then :
+      elif [ "$(Build.SourceBranchName)" = "develop" ]; then
+        echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackageDevelopSuffix)'
+      else
+        echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackageUnknownCISuffix)'
+      fi
+    else
+      echo '##vso[task.setvariable variable=NuGetPackageSuffix]$(NuGetPackageUnknownSuffix)'
+    fi
+  displayName: 'Determine NuGet Package Semantic Name'
+- bash: |
+    echo '----------- Build Agent Information -----------'
+    echo 'OS: $(Agent.OS)'
+    echo 'Build Directory: $(Agent.BuildDirectory)'
+    echo 'Home Directory: $(Agent.HomeDirectory)'
+    echo '------------ Trigger Information --------------'
+    echo 'Build Reason: $(Build.Reason)'
+    echo 'Source Branch Name: $(Build.SourceBranch)'
+    echo 'Commit Hash: $(Build.SourceVersion)'
+    echo '================ Commit Message ==============='
+    echo '$(Build.SourceVersionMessage)'
+    echo '============== End Commit Message ============='
+    echo 'PR Number: $(System.PullRequest.PullRequestNumber)'
+    echo '------------- Build Information ---------------'
+    echo 'Artifact staging directory: $(Build.ArtifactStagingDirectory)'
+    echo '------------- NuGet Information ---------------'
+    echo '-----------------------------------------------'
+    echo 'NuGetPackageSuffix: $(NuGetPackageSuffix)'
+    echo '-----------------------------------------------'
+  displayName: 'Log Variables of Interest'
+- task: UseDotNet@2
+  displayName: 'Install .NET Core sdk'
+  inputs:
+    packageType: sdk
+    version: 2.2.203
+    installationPath: $(Agent.ToolsDirectory)/dotnet
 - task: DotNetCoreCLI@2
-  displayName: 'Build Solution'
+  displayName: 'Build Library and UnitTests'
   inputs:
     command: 'build'
-    configuration: '$(BuildConfiguration)'
+    projects: |
+      ./src/mtconnect_adapter_sdk.csproj
+      ./test/mtconnect_adapter_sdk.utests.csproj
+    arguments: --configuration $(BuildConfiguration) --version-suffix $(Build.BuildId) --verbosity diag
 - task: DotNetCoreCLI@2
   displayName: 'Run Unit Tests'
   inputs:
     command: 'test'
+    projects: 'test/**/*.utests.csproj'
 - task: DotNetCoreCLI@2
   displayName: 'Generate NuGet Package'
   inputs:
-    command: pack
-    packagesToPack: './src/mtconnect_adapter_sdk.csproj'
-    includesymbols: true
-    outputDir: '$(Build.ArtifactStagingDirectory)'
+    command: custom
+    custom: pack
+    projects: ./src/mtconnect_adapter_sdk.csproj
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory) --version-suffix $(NuGetPackageSuffix) --no-build'
 - task: DotNetCoreCLI@2
   displayName: 'Publish NuGet Package to mtconnect_sdk_feed'
   inputs:
     command: 'push'
-    searchPatternPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
     feedPublish: 'mtconnect_sdk_feed'
