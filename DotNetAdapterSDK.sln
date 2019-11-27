@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "mtconnect_adapter_sdk.utest
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdapterLab", "sample\AdapterLab.csproj", "{AD8454F6-F317-4279-A2E0-E0DCC7AF5B2A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdapterLab.utests", "sample\AdapterLab.utests\AdapterLab.utests.csproj", "{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{AD8454F6-F317-4279-A2E0-E0DCC7AF5B2A}.Release|x64.Build.0 = Release|Any CPU
 		{AD8454F6-F317-4279-A2E0-E0DCC7AF5B2A}.Release|x86.ActiveCfg = Release|Any CPU
 		{AD8454F6-F317-4279-A2E0-E0DCC7AF5B2A}.Release|x86.Build.0 = Release|Any CPU
+		{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}.Debug|x64.Build.0 = Debug|Any CPU
+		{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}.Debug|x86.Build.0 = Debug|Any CPU
+		{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}.Release|x64.ActiveCfg = Release|Any CPU
+		{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}.Release|x64.Build.0 = Release|Any CPU
+		{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}.Release|x86.ActiveCfg = Release|Any CPU
+		{880BA7F8-FF25-4BB5-AF01-F3C34FF13C7B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

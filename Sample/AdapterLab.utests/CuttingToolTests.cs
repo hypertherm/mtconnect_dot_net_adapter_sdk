@@ -15,14 +15,16 @@
  */
 
 using MTConnect;
+using MTConnect.Adapter;
 using NUnit.Framework;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using System.Text;
 using System.Linq;
+using System.IO;
 
-namespace NUnit.AdapterLabTests
+namespace AdapterLab.utests
 {
 
     [TestFixture]
@@ -208,6 +210,35 @@ namespace NUnit.AdapterLabTests
             Assert.IsNull(lf.Attribute("initial"));
             Assert.IsNull(lf.Attribute("limit"));
             Assert.AreEqual("100", lf.Value);
+        }
+
+        [Test]
+        public void should_send_cutting_tool()
+        {
+            Event avail = new Event("avail");
+            MTCAdapter adapter = new MTCAdapter();
+            adapter.AddDataItem(avail);
+            avail.Value = "AVAILABLE";
+            adapter.SendChanged();
+
+            Stream stream = new MemoryStream(2048);
+            adapter.addClientStream(stream);
+            long pos = stream.Position;
+
+            CuttingTool tool = new CuttingTool("12345", "AAAA", "12345");
+            tool.Description = "A tool description";
+            tool.AddProperty("ProcessSpindleSpeed",
+                            new string[] { "minimum", "1000", "maximum", "10000", },
+                            "2500");
+            tool.AddStatus(new string[] { "USED", "MEASURED" });
+
+            adapter.AddAsset(tool);
+
+            stream.Seek(pos, SeekOrigin.Begin);
+            byte[] buffer = new byte[1024];
+            int count = stream.Read(buffer, 0, 1024);
+            string line = encoder.GetString(buffer, 0, count);
+            Assert.IsTrue(line.EndsWith("|@ASSET@|12345|CuttingTool|--multiline--ABCD\n<CuttingTool toolId=\"AAAA\" serialNumber=\"12345\" assetId=\"12345\"><Description>A tool description</Description><CuttingToolLifeCycle><ProcessSpindleSpeed minimum=\"1000\" maximum=\"10000\">2500</ProcessSpindleSpeed><CutterStatus><Status>USED</Status><Status>MEASURED</Status></CutterStatus></CuttingToolLifeCycle></CuttingTool>\n--multiline--ABCD\n"));
         }
     }
 }

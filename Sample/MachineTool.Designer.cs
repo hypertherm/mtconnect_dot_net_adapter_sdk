@@ -115,6 +115,7 @@
             // 
             this.port.Location = new System.Drawing.Point(50, 17);
             this.port.Name = "port";
+            this.port.ReadOnly = true;
             this.port.Size = new System.Drawing.Size(62, 20);
             this.port.TabIndex = 1;
             this.port.Text = "7878";

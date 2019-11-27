@@ -13,12 +13,11 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-
-using MTConnect;
+using MTConnect.DataElements;
 using NUnit.Framework;
 using System.Collections.Generic;
 
-namespace NUnit.AdapterLabTests
+namespace MTConnect.utests
 {
 
     [TestFixture]
