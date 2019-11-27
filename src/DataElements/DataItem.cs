@@ -143,26 +143,4 @@ namespace MTConnect.DataElements
             return list;
         }
     }
-
-    /// <summary>
-    /// Event is just an alias for DataItem
-    /// </summary>
-    public class Event : DataItem 
-    {
-        public Event(string name)
-            : base(name)
-        {
-        }
-    }
-
-    /// <summary>
-    /// A sample is a data item with a floating point value
-    /// </summary>
-    public class Sample : DataItem
-    {
-        public Sample(string name)
-            : base(name)
-        {
-        }
-    }
 }
