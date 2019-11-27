@@ -22,7 +22,6 @@ steps:
     echo '================ Commit Message ==============='
     echo '$(Build.SourceVersionMessage)'
     echo '============== End Commit Message ============='
-    echo 'PR Number: $(System.PullRequest.PullRequestNumber)'
     echo '------------- Build Information ---------------'
     echo 'Artifact staging directory: $(Build.ArtifactStagingDirectory)'
     echo '-----------------------------------------------'
