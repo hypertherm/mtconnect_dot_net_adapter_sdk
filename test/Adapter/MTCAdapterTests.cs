@@ -180,7 +180,7 @@ namespace MTConnect.utests.Adapter
             long pos = stream.Position;
 
             adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
+            cond.Add(ConditionLevel.FAULT, "A Fault", "111");
             adapter.SendChanged();
 
             stream.Seek(pos, SeekOrigin.Begin);
@@ -205,7 +205,7 @@ namespace MTConnect.utests.Adapter
             adapter.addClientStream(stream);
 
             adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
+            cond.Add(ConditionLevel.FAULT, "A Fault", "111");
             adapter.SendChanged();
             long pos = stream.Position;
 
@@ -234,13 +234,13 @@ namespace MTConnect.utests.Adapter
             adapter.addClientStream(stream);
 
             adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
-            cond.Add(Condition.Level.FAULT, "Another Fault", "112");
+            cond.Add(ConditionLevel.FAULT, "A Fault", "111");
+            cond.Add(ConditionLevel.FAULT, "Another Fault", "112");
             adapter.SendChanged();
             long pos = stream.Position;
 
             adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "Another Fault", "112");
+            cond.Add(ConditionLevel.FAULT, "Another Fault", "112");
             adapter.SendChanged();
 
             stream.Seek(pos, SeekOrigin.Begin);
@@ -265,12 +265,12 @@ namespace MTConnect.utests.Adapter
             adapter.addClientStream(stream);
 
             adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
-            cond.Add(Condition.Level.FAULT, "Another Fault", "112");
+            cond.Add(ConditionLevel.FAULT, "A Fault", "111");
+            cond.Add(ConditionLevel.FAULT, "Another Fault", "112");
             adapter.SendChanged();
 
             adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "Another Fault", "112");
+            cond.Add(ConditionLevel.FAULT, "Another Fault", "112");
             adapter.SendChanged();
             long pos = stream.Position;
 
@@ -299,7 +299,7 @@ namespace MTConnect.utests.Adapter
             adapter.addClientStream(stream);
 
             adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
+            cond.Add(ConditionLevel.FAULT, "A Fault", "111");
             adapter.SendChanged();
             long pos = stream.Position;
 
@@ -324,7 +324,7 @@ namespace MTConnect.utests.Adapter
             adapter.addClientStream(stream);
 
             adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
+            cond.Add(ConditionLevel.FAULT, "A Fault", "111");
             adapter.SendChanged();
             long pos = stream.Position;
 
@@ -354,8 +354,8 @@ namespace MTConnect.utests.Adapter
             adapter.addClientStream(stream);
 
             adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
-            cond.Add(Condition.Level.FAULT, "Another Fault", "112");
+            cond.Add(ConditionLevel.FAULT, "A Fault", "111");
+            cond.Add(ConditionLevel.FAULT, "Another Fault", "112");
             adapter.SendChanged();
             long pos = stream.Position;
 

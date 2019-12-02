@@ -43,7 +43,7 @@ namespace MTConnect.utests
         public void should_include_newly_added_activations()
         {
             c.Begin();
-            c.Add(Condition.Level.WARNING, "text", "code", "HIGH", "1123");
+            c.Add(ConditionLevel.WARNING, "text", "code", "HIGH", "1123");
             c.Prepare();
             List<DataItem> list = c.ItemList();
 
@@ -55,7 +55,7 @@ namespace MTConnect.utests
         public void should_remove_old_activations_after_cleanup()
         {
             c.Begin();
-            c.Add(Condition.Level.WARNING, "text", "code");
+            c.Add(ConditionLevel.WARNING, "text", "code");
             c.Prepare();
             c.Cleanup();
 
@@ -75,12 +75,12 @@ namespace MTConnect.utests
         public void should_remove_old_activations_and_add_new()
         {
             c.Begin();
-            c.Add(Condition.Level.WARNING, "text", "code");
+            c.Add(ConditionLevel.WARNING, "text", "code");
             c.Prepare();
             c.Cleanup();
 
             c.Begin();
-            c.Add(Condition.Level.WARNING, "text", "code2");
+            c.Add(ConditionLevel.WARNING, "text", "code2");
             c.Prepare();
             List<DataItem> list = c.ItemList();
             c.Cleanup();
@@ -94,8 +94,8 @@ namespace MTConnect.utests
         public void should_remove_only_old_activations()
         {
             c.Begin();
-            c.Add(Condition.Level.WARNING, "text", "code1");
-            c.Add(Condition.Level.FAULT, "text", "code2");
+            c.Add(ConditionLevel.WARNING, "text", "code1");
+            c.Add(ConditionLevel.FAULT, "text", "code2");
             c.Prepare();
             List<DataItem> list = c.ItemList();
             c.Cleanup();
@@ -103,7 +103,7 @@ namespace MTConnect.utests
             Assert.AreEqual(2, list.Count);
 
             c.Begin();
-            c.Add(Condition.Level.FAULT, "text", "code2");
+            c.Add(ConditionLevel.FAULT, "text", "code2");
             c.Prepare();
             list = c.ItemList();
             c.Cleanup();
@@ -115,7 +115,7 @@ namespace MTConnect.utests
             Assert.AreEqual("c|FAULT|code2|||text", list[0].ToString());
 
             c.Begin();
-            c.Add(Condition.Level.FAULT, "text", "code2");
+            c.Add(ConditionLevel.FAULT, "text", "code2");
             c.Prepare();
             list = c.ItemList();
             c.Cleanup();
@@ -140,7 +140,7 @@ namespace MTConnect.utests
         public void simple_conditions_should_not_mark_and_sweep()
         {
             s.Begin();
-            s.Add(Condition.Level.WARNING, "text", "code");
+            s.Add(ConditionLevel.WARNING, "text", "code");
             s.Prepare();
             s.Cleanup();
 
@@ -160,7 +160,7 @@ namespace MTConnect.utests
         public void simple_conditions_should_be_cleared_manually()
         {
             s.Begin();
-            s.Add(Condition.Level.WARNING, "text", "code");
+            s.Add(ConditionLevel.WARNING, "text", "code");
             s.Prepare();
             List<DataItem> list = s.ItemList();
             s.Cleanup();
@@ -178,8 +178,8 @@ namespace MTConnect.utests
         public void simple_conditions_should_clear_one_code_when_multiple_are_present()
         {
             s.Begin();
-            s.Add(Condition.Level.WARNING, "text1", "code1");
-            s.Add(Condition.Level.FAULT, "text2", "code2");
+            s.Add(ConditionLevel.WARNING, "text1", "code1");
+            s.Add(ConditionLevel.FAULT, "text2", "code2");
             s.Prepare();
             List<DataItem> list = s.ItemList();
             s.Cleanup();

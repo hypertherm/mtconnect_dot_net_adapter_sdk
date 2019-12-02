@@ -20,6 +20,16 @@ using System.Linq;
 
 namespace MTConnect.DataElements
 {
+    /// <summary>
+    /// The four values for the condition.
+    /// </summary> 
+    public enum ConditionLevel
+    {
+        UNAVAILABLE,
+        NORMAL,
+        WARNING,
+        FAULT
+    }
     
     /// <summary>
     /// A condition handles the fact that a single condition can have multiple 
@@ -27,102 +37,6 @@ namespace MTConnect.DataElements
     /// </summary>
     public class Condition : DataItem
     {
-        /// <summary>
-        /// The four values for the condition.
-        /// </summary> 
-        public enum Level
-        {
-            UNAVAILABLE,
-            NORMAL,
-            WARNING,
-            FAULT
-        }
-
-        /// <summary>
-        /// The Activation is itself a data item. This is so it can be cleared 
-        /// and treated like other data items when generating text.
-        /// </summary>
-        public class Active : DataItem
-        {
-            // The pieces of the activation are only used by the condition.
-            public Level mLevel;
-            public string mText;
-            public string mNativeCode;
-            public string mNativeSeverity;
-            public string mQualifier;
-
-            /// <summary>
-            /// The marked flag tells if this alarm has been reasserted.
-            /// </summary>
-            public bool mMarked = true;
-
-            /// <summary>
-            /// A placeholder activation is just a normal or unavailable.
-            /// </summary>
-            public bool mPlaceholder = false;
-
-            /// <summary>
-            /// Create a new activation
-            /// </summary>
-            /// <param name="name">The name of the condition, passed from the parent</param>
-            /// <param name="level">The condition level</param>
-            /// <param name="text">The descriptive text for the condition</param>
-            /// <param name="code">The native code of the alarm or warning</param>
-            /// <param name="qualifier">A high/low qualifier</param>
-            /// <param name="severity">The native severity of the condition</param>
-            public Active(string name, Level level, string text = "", string code = "", 
-                          string qualifier = "", string severity = "")
-                : base(name)
-            {
-                mLevel = level;
-                mText = text;
-                mNativeCode = code;
-                mQualifier = qualifier;
-                mNativeSeverity = severity;
-                mNewLine = true;
-
-                if (mNativeCode.Length == 0 && (mLevel == Level.NORMAL || mLevel == Level.UNAVAILABLE))
-                    mPlaceholder = true;
-            }
-
-            /// <summary>
-            /// Update the values of the activation. Also marks this activation.
-            /// </summary>
-            /// <param name="level">The condition level</param>
-            /// <param name="text">The descriptive text for the condition</param>
-            /// <param name="qualifier">A high/low qualifier</param>
-            /// <param name="severity">The native severity of the condition</param>
-            /// <returns>true if the condition has changed</returns>
-            public bool Set(Level level, string text = "", 
-                          string qualifier = "", string severity = "")
-            {
-                mChanged = level != mLevel || text != mText || qualifier != mQualifier ||
-                    severity != mNativeSeverity;
-                if (mChanged)
-                {
-                    mLevel = level;
-                    mQualifier = qualifier;
-                    mText = text;
-                    mNativeSeverity = severity;
-                }
-
-                mMarked = true;
-                return mChanged;
-            }
-
-            public override string ToString()
-            {
-                return mName + "|" + Enum.GetName(mLevel.GetType(), mLevel) + "|" + mNativeCode + "|" + mNativeSeverity + "|" + mQualifier + "|" + mText;
-            }
-
-            /// <summary>
-            /// Resets the marked flag.
-            /// </summary>
-            public void Clear()
-            {
-                mMarked = false;
-            }
-        }
 
         /// <summary>
         /// A flag to indicate that the mark and sweep has begun.
@@ -152,7 +66,7 @@ namespace MTConnect.DataElements
         {
             mNewLine = true;
             mSimple = simple;
-            Add(new Active(mName, Level.UNAVAILABLE));
+            Add(new Active(mName, ConditionLevel.UNAVAILABLE));
         }
 
         /// <summary>
@@ -160,7 +74,7 @@ namespace MTConnect.DataElements
         /// </summary>
         public override void Unavailable()
         {
-            Add(Level.UNAVAILABLE);
+            Add(ConditionLevel.UNAVAILABLE);
         }
 
         /// <summary>
@@ -214,7 +128,7 @@ namespace MTConnect.DataElements
                 {
                     if (!active.mPlaceholder && !active.mMarked)
                     {
-                        active.Set(Level.NORMAL, "");
+                        active.Set(ConditionLevel.NORMAL, "");
                         active.mMarked = false;
                     }
                     if (active.Changed)
@@ -260,13 +174,13 @@ namespace MTConnect.DataElements
         /// Adds a new activation to the condition or if normal or unavailable, removes the 
         /// activation.
         /// </summary>
-        /// <param name="level">The level</param>
+        /// <param name="ConditionLevel">The ConditionLevel</param>
         /// <param name="text">The descriptive text for the condition</param>
         /// <param name="code">The native code</param>
         /// <param name="qualifier">The qualifier</param>
         /// <param name="severity">The native severity</param>
         /// <returns>true if the activation is modified</returns>
-        public bool Add(Level level, string text = "", string code = "", string qualifier = "", string severity = "")
+        public bool Add(ConditionLevel ConditionLevel, string text = "", string code = "", string qualifier = "", string severity = "")
         {
             bool result = false;
 
@@ -276,17 +190,17 @@ namespace MTConnect.DataElements
                 first = mActiveList.First();
 
             // Check for a reset of all conditions for a normal or an unavailable
-            if ((level == Level.NORMAL || level == Level.UNAVAILABLE) && code.Length == 0)
+            if ((ConditionLevel == ConditionLevel.NORMAL || ConditionLevel == ConditionLevel.UNAVAILABLE) && code.Length == 0)
             {
                 // If we haven't changed.
-                if (mActiveList.Count == 1 && first.mLevel == level)
+                if (mActiveList.Count == 1 && first.mLevel == ConditionLevel)
                     first.mMarked = true;
                 else
                 {
                     // Create a new placeholder activation. We don't need to remember the
                     // old activations because the global normal will reset everything.
                     mActiveList.Clear();
-                    Add(new Active(mName, level));
+                    Add(new Active(mName, ConditionLevel));
                     result = mChanged = true;
                 }
             }
@@ -306,13 +220,13 @@ namespace MTConnect.DataElements
                 {
                     // If we found it, update all the properties and see if it has changed.
                     // This will mark this activation
-                    result = found.Set(level, text, qualifier, severity);
+                    result = found.Set(ConditionLevel, text, qualifier, severity);
                     mChanged = mChanged || result;
                 }
                 else
                 {
                     // Otherwise, we have a new activation and we should create a new one.
-                    Add(new Active(mName, level, text, code, qualifier, severity));
+                    Add(new Active(mName, ConditionLevel, text, code, qualifier, severity));
                     result = mChanged = true;
                 }
             }
@@ -334,11 +248,11 @@ namespace MTConnect.DataElements
             {
                 // If we've removed the last activation, go back to normal.
                 if (mActiveList.Count == 1)
-                    Add(Level.NORMAL);
+                    Add(ConditionLevel.NORMAL);
                 else
                 {
                     // Otherwise, just clear this one.
-                    found.Set(Level.NORMAL);
+                    found.Set(ConditionLevel.NORMAL);
                     // Clear makes the activation be removed next sweep.
                     found.Clear();
                 }
@@ -354,7 +268,7 @@ namespace MTConnect.DataElements
         // Cover to set everything to normal.
         public bool Normal()
         {
-            return Add(Level.NORMAL);
+            return Add(ConditionLevel.NORMAL);
         }
 
         /// <summary>
@@ -388,7 +302,7 @@ namespace MTConnect.DataElements
             {
                 if (mChanged)
                 {
-                    // Find all the changed activations and add them to the list                    
+                    // Find all the changed activations and add them to the list
                     foreach (Active active in mActiveList)
                     {
                         if (active.Changed)
