@@ -32,6 +32,9 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 2.2.203
+        source-url: https://nuget.pkg.github.com/hypertherm/index.json
+      env:
+        NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
     - name: Install dependencies
       run: dotnet restore
     - name: Build
@@ -40,3 +43,5 @@ jobs:
       run: dotnet test test/ --no-restore --verbosity normal
     - name: Create package
       run: dotnet pack src/mtconnect_adapter_sdk.csproj --configuration release -p:PackageVersion="${{ steps.gitversion.outputs.legacySemVer }}"
+    - name: Publish Packages
+      run: dotnet nuget push '**/*.nupkg'
