@@ -38,3 +38,5 @@ jobs:
       run: dotnet build src/mtconnect_adapter_sdk.csproj --configuration Release --no-restore -p:Version="${{ steps.gitversion.outputs.assemblySemVer }}"
     - name: Test
       run: dotnet test test/ --no-restore --verbosity normal
+    - name: Create package
+      run: dotnet pack src/mtconnect_adapter_sdk.csproj --configuration release -p:PackageVersion="${{ steps.gitversion.outputs.legacySemVer }}"
