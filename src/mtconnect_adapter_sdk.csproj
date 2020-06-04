@@ -6,8 +6,17 @@
     <!-- Generate a NuGet package-->
     <PackageId>mtconnect_adapter_sdk</PackageId>
     <VersionPrefix>0.3.0</VersionPrefix>
-    <Authors></Authors>
-    <Company></Company>
+    <Authors>mtconnect, Hypertherm</Authors>
+    <Company>Hypertherm</Company>
+    <Description>MT Connect adapter for .NET </Description>
+    <PackageId>mtconnect_adapter_sdk</PackageId>
+    <PackageProjectUrl>https://github.com/hypertherm/mtconnect_dot_net_adapter_sdk</PackageProjectUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageIconUrl>https://www.hypertherm.com/globalassets/common/logo_ht_shapingpossibility_185x44.png</PackageIconUrl>
+    <RepositoryUrl>https://github.com/hypertherm/mtconnect_dot_net_adapter_sdk</RepositoryUrl>
+    <PackageTags>hypertherm mtconnect</PackageTags>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <!-- End NuGet Information -->
   </PropertyGroup>
 
   <ItemGroup>

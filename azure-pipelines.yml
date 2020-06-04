@@ -7,7 +7,7 @@ variables:
   ProjectsToTest: '**/*.tests.csproj'
 
 pool:
-  vmImage: 'vs2015-win2012r2'
+  vmImage: 'vs2017-win2016'
 
 steps: 
 - bash: |
