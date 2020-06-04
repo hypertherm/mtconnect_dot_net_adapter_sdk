@@ -24,6 +24,10 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using MTConnect.DataElements;
+using MTConnect.Assets;
+using System;
+using FluentAssertions;
+using System.Xml;
 
 namespace MTConnect.utests.Adapter
 {
@@ -368,6 +372,68 @@ namespace MTConnect.utests.Adapter
             int count = stream.Read(buffer, 0, 1024);
             string line = encoder.GetString(buffer, 0, count);
             Assert.IsTrue(line.EndsWith("cond|NORMAL|111|||\n"));
+        }
+
+        [Test]
+        public void remove_asset()
+        {
+            Event avail = new Event("avail");
+            adapter.AddDataItem(avail);
+            avail.Value = "AVAILABLE";
+            adapter.SendChanged();
+            
+            Mock<Asset> mockAsset = new Mock<Asset>();
+            mockAsset
+                .Setup(a => a.AssetId)
+                .Returns("324");
+
+            long pos = stream.Position;
+            adapter.addClientStream(stream);
+            adapter.RemoveAsset(mockAsset.Object);
+
+            stream.Seek(pos, SeekOrigin.Begin);
+            byte[] buffer = new byte[1024];
+            int count = stream.Read(buffer, 0, 1024);
+            string line = encoder.GetString(buffer, 0, count);
+            Console.WriteLine(line);
+            line.Should().EndWith("|@REMOVE_ASSET@|324");
+        }
+
+        [Test]
+        public void add_asset()
+        {
+            Event avail = new Event("avail");
+            adapter.AddDataItem(avail);
+            avail.Value = "AVAILABLE";
+            adapter.SendChanged();
+            
+            Mock<Asset> mockAsset = new Mock<Asset>();
+            mockAsset
+                .Setup(a => a.AssetId)
+                .Returns("324");
+            mockAsset
+                .Setup(a => a.GetMTCType())
+                .Returns("test_asset");
+            
+            XmlWriter modifiedWriter = new XmlTextWriter(new MemoryStream(), Encoding.UTF8);
+
+            mockAsset
+                .Setup(a => a.ToXml(It.IsAny<XmlWriter>()))
+                .Callback<XmlWriter>(w => {
+                    modifiedWriter = w;
+                    modifiedWriter.WriteElementString("hi", "there");
+                })
+                .Returns(modifiedWriter);
+
+            long pos = stream.Position;
+            adapter.addClientStream(stream);
+            adapter.AddAsset(mockAsset.Object);
+
+            stream.Seek(pos, SeekOrigin.Begin);
+            byte[] buffer = new byte[1024];
+            int count = stream.Read(buffer, 0, 1024);
+            string line = encoder.GetString(buffer, 0, count);
+            line.Should().EndWith("|@ASSET@|324|test_asset|--multiline--ABCD\n<hi>there</hi>\n--multiline--ABCD\n");
         }
     }
 }

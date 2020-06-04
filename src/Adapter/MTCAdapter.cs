@@ -55,6 +55,8 @@ namespace MTConnect.Adapter
     public class MTCAdapter
     {
         protected IList<Tuple<MTConnectDeviceCommand, string>> _commandsToSendOnConnect;
+        protected IList<Asset> _assetsToAdd;
+        protected IList<Asset> _assetsToRemove;
         protected static Dictionary<MTConnectDeviceCommand, string> _commandConverter = new Dictionary<MTConnectDeviceCommand, string>
         {
             { MTConnectDeviceCommand.Manufacturer, "manufacturer" },
@@ -157,6 +159,8 @@ namespace MTConnect.Adapter
         {
             _tcpListener = tcpListenerProvider;
             _commandsToSendOnConnect = new List<Tuple<MTConnectDeviceCommand, string>>();
+            _assetsToAdd = new List<Asset>();
+            _assetsToRemove = new List<Asset>();
             Heartbeat = 10000;
             Verbose = verbose;
             mClients = new List<Stream>();
@@ -304,13 +308,8 @@ namespace MTConnect.Adapter
             mBegun = false;
         }
 
-        /// <summary>
-        /// Send a new asset to the Agent
-        /// </summary>
-        /// <param name="asset">The asset</param>
-        public void AddAsset(Asset asset)
+        private string MakeAddAssetString(Asset asset)
         {
-            UTF8Encoding encoder = new UTF8Encoding();
             StringBuilder result = new StringBuilder();
             
             DateTime now = DateTime.UtcNow;
@@ -329,7 +328,45 @@ namespace MTConnect.Adapter
             writer.Close();
             result.Append("\n--multiline--ABCD\n");
 
-            SendToAll(result.ToString());
+            return result.ToString();
+        }
+        /// <summary>
+        /// Send a new asset to the Agent
+        /// </summary>
+        /// <param name="asset">The asset</param>
+        public void AddAsset(Asset asset, bool sendOnNewClientConnect = true)
+        {
+            if (sendOnNewClientConnect)
+            {
+                _assetsToAdd.Add(asset);
+            }
+
+            SendToAll(MakeAddAssetString(asset));
+        }
+        
+        private string MakeRemoveAssetString(Asset asset)
+        {
+            StringBuilder result = new StringBuilder();
+            
+            DateTime now = DateTime.UtcNow;
+            result.Append(now.ToString("yyyy-MM-dd\\THH:mm:ss.fffffffK"));
+            result.Append("|@REMOVE_ASSET@|");
+            result.Append(asset.AssetId);
+            return result.ToString();
+        }
+
+        /// <summary>
+        /// Mark an  asset as removed on the Agent
+        /// </summary>
+        /// <param name="asset">The asset</param>
+        public void RemoveAsset(Asset asset, bool sendOnNewClientConnect = true)
+        {
+            if (sendOnNewClientConnect)
+            {
+                _assetsToRemove.Add(asset);
+            }
+
+            SendToAll(MakeRemoveAssetString(asset));
         }
 
         /// <summary>
@@ -579,6 +616,18 @@ namespace MTConnect.Adapter
                     foreach(Tuple<MTConnectDeviceCommand, string> tuple in _commandsToSendOnConnect)
                     {
                         SendCommand(tuple.Item1, tuple.Item2, false);
+                    }
+                    byte[] assetMessage;
+                    foreach(Asset a in _assetsToAdd)
+                    {
+                        assetMessage = mEncoder.GetBytes(MakeAddAssetString(a));
+                        WriteToClient(client.GetStream(), assetMessage);
+
+                    }
+                    foreach(Asset a in _assetsToRemove)
+                    {
+                        assetMessage = mEncoder.GetBytes(MakeRemoveAssetString(a));
+                        WriteToClient(client.GetStream(), assetMessage);
                     }
                     clientThread.Join();
                 }
