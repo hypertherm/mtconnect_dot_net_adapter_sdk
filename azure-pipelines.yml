@@ -27,7 +27,7 @@ steps:
   displayName: 'Install .NET Core sdk'
   inputs:
     packageType: sdk
-    version: 2.2.203
+    version: 3.1.x
     installationPath: $(Agent.ToolsDirectory)/dotnet
 - task: GitVersion@5
   displayName: 'Update build/release version using GitVersion'
