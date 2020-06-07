@@ -313,7 +313,7 @@ namespace MTConnect.Adapter
             StringBuilder result = new StringBuilder();
             
             DateTime now = DateTime.UtcNow;
-            result.Append(now.ToString("yyyy-MM-dd\\THH:mm:ss.fffffffK"));
+            result.Append(now.ToString("yyyy-MM-dd\\THH:mm:ss.ffffffK"));
             result.Append("|@ASSET@|");
             result.Append(asset.AssetId);
             result.Append('|');
@@ -349,7 +349,7 @@ namespace MTConnect.Adapter
             StringBuilder result = new StringBuilder();
             
             DateTime now = DateTime.UtcNow;
-            result.Append(now.ToString("yyyy-MM-dd\\THH:mm:ss.fffffffK"));
+            result.Append(now.ToString("yyyy-MM-dd\\THH:mm:ss.ffffffK"));
             result.Append("|@REMOVE_ASSET@|");
             result.Append(asset.AssetId);
             return result.ToString();
