@@ -352,6 +352,7 @@ namespace MTConnect.Adapter
             result.Append(now.ToString("yyyy-MM-dd\\THH:mm:ss.ffffffK"));
             result.Append("|@REMOVE_ASSET@|");
             result.Append(asset.AssetId);
+            result.Append("\n");
             return result.ToString();
         }
 

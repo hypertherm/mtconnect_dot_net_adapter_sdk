@@ -396,7 +396,7 @@ namespace MTConnect.utests.Adapter
             int count = stream.Read(buffer, 0, 1024);
             string line = encoder.GetString(buffer, 0, count);
             Console.WriteLine(line);
-            line.Should().EndWith("|@REMOVE_ASSET@|324");
+            line.Should().EndWith("|@REMOVE_ASSET@|324\n");
         }
 
         [Test]
