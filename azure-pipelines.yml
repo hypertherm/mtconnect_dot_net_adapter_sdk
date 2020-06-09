@@ -23,17 +23,17 @@ steps:
     echo 'Artifact staging directory: $(Build.ArtifactStagingDirectory)'
     echo '-----------------------------------------------'
   displayName: 'Log Variables of Interest'
+- task: gittools.gitversion.gitversion-task.GitVersion@5
+  displayName: 'Update build/release version using GitVersion'
+  inputs:
+    useConfigFile: true
+    configFilePath: GitVersion.yml
 - task: UseDotNet@2
   displayName: 'Install .NET Core sdk'
   inputs:
     packageType: sdk
-    version: 2.2.203
+    version: 3.1.x
     installationPath: $(Agent.ToolsDirectory)/dotnet
-- task: GitVersion@5
-  displayName: 'Update build/release version using GitVersion'
-  inputs:
-    runtime: 'core'
-    configFilePath: '$(VersionNumberConfigurationFile)'
 - task: DotNetCoreCLI@2
   displayName: 'Build Library and UnitTests'
   inputs:
