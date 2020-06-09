@@ -30,9 +30,9 @@ namespace AdapterLab
 
     public partial class CuttingToolForm : Form
     {
-        MTCAdapter mAdapter;
+        MTConnectAdapter mAdapter;
 
-        public CuttingToolForm(MTCAdapter adapter)
+        public CuttingToolForm(MTConnectAdapter adapter)
         {
             InitializeComponent();
             mAdapter = adapter;

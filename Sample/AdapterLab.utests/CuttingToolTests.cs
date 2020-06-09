@@ -216,7 +216,7 @@ namespace AdapterLab.utests
         public void should_send_cutting_tool()
         {
             Event avail = new Event("avail");
-            MTCAdapter adapter = new MTCAdapter();
+            MTConnectAdapter adapter = new MTConnectAdapter();
             adapter.AddDataItem(avail);
             avail.Value = "AVAILABLE";
             adapter.SendChanged();

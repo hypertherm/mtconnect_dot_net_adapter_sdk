@@ -32,7 +32,7 @@ using System.Xml;
 namespace MTConnect.utests.Adapter
 {
     [TestFixture]
-    public class MTCAdapterTests : MTCAdapter
+    public class MTConnectAdapterTests : MTConnectAdapter
     {
         ASCIIEncoding encoder = new ASCIIEncoding();
         Stream stream;
@@ -40,7 +40,7 @@ namespace MTConnect.utests.Adapter
         private Mock<TcpClientProvider> _mockTcpClientProvider;
         private Mock<TcpListenerProvider> _mockTcpListenerProvider;
 
-        public MTCAdapterTests() : base()
+        public MTConnectAdapterTests() : base()
         {
             _mockTcpListenerProvider = new Mock<TcpListenerProvider>();
             _mockTcpClientProvider = new Mock<TcpClientProvider>();
@@ -54,13 +54,13 @@ namespace MTConnect.utests.Adapter
             Heartbeat = 1;
         }
 
-        private MTCAdapter adapter;
+        private MTConnectAdapter adapter;
 
         [SetUp]
         public void initialize()
         {
             stream = new MemoryStream(2048);
-            adapter = new MTCAdapterTests();
+            adapter = new MTConnectAdapterTests();
             adapter.Start();
             while (!adapter.Running) Thread.Sleep(10);
         }
@@ -382,7 +382,7 @@ namespace MTConnect.utests.Adapter
             avail.Value = "AVAILABLE";
             adapter.SendChanged();
             
-            Mock<Asset> mockAsset = new Mock<Asset>();
+            Mock<IAsset> mockAsset = new Mock<IAsset>();
             mockAsset
                 .Setup(a => a.AssetId)
                 .Returns("324");
@@ -407,12 +407,12 @@ namespace MTConnect.utests.Adapter
             avail.Value = "AVAILABLE";
             adapter.SendChanged();
             
-            Mock<Asset> mockAsset = new Mock<Asset>();
+            Mock<IAsset> mockAsset = new Mock<IAsset>();
             mockAsset
                 .Setup(a => a.AssetId)
                 .Returns("324");
             mockAsset
-                .Setup(a => a.GetMTCType())
+                .Setup(a => a.AssetType)
                 .Returns("test_asset");
             
             XmlWriter modifiedWriter = new XmlTextWriter(new MemoryStream(), Encoding.UTF8);

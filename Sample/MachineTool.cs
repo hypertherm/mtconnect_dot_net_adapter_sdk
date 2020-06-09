@@ -24,7 +24,7 @@ namespace AdapterLab
 {
     public partial class MachineTool : Form
     {
-        MTCAdapter mAdapter = new MTCAdapter();
+        MTConnectAdapter mAdapter = new MTConnectAdapter();
         Event mAvail = new Event("avail");
         Event mEStop = new Event("estop");
 

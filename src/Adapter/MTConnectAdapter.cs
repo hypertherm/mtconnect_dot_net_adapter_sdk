@@ -29,47 +29,27 @@ using MTConnect.Assets;
 
 namespace MTConnect.Adapter
 {
-    ///<summary>
-    /// Commands that can be issues to the Adapter
-    /// The Commands.Device must be issued first to set the device (byname or uuid) that will be commanded
-    ///</summary>
-
-    public enum MTConnectDeviceCommand
-    {
-        Manufacturer,
-        Station,
-        SerialNumber,
-        Description,
-        NativeName,
-        Calibration,
-        ConversionRequired, // {yes, no}
-        RelativeTime, // {yes, no}
-        RealTime, // {yes, no}
-        Device,
-        UUID
-    }
-
     /// <summary>
     /// An MTConnect adapter
     /// </summary>
-    public class MTCAdapter
+    public class MTConnectAdapter : IAdapter
     {
-        protected IList<Tuple<MTConnectDeviceCommand, string>> _commandsToSendOnConnect;
-        protected IList<Asset> _assetsToAdd;
-        protected IList<Asset> _assetsToRemove;
-        protected static Dictionary<MTConnectDeviceCommand, string> _commandConverter = new Dictionary<MTConnectDeviceCommand, string>
+        protected IList<Tuple<DeviceCommand, string>> _commandsToSendOnConnect;
+        protected IList<IAsset> _assetsToAdd;
+        protected IList<IAsset> _assetsToRemove;
+        protected static Dictionary<DeviceCommand, string> _commandConverter = new Dictionary<DeviceCommand, string>
         {
-            { MTConnectDeviceCommand.Manufacturer, "manufacturer" },
-            { MTConnectDeviceCommand.Station, "station" },
-            { MTConnectDeviceCommand.SerialNumber, "serialNumber" },
-            { MTConnectDeviceCommand.Description, "description" },
-            { MTConnectDeviceCommand.NativeName, "nativeName" },
-            { MTConnectDeviceCommand.Calibration, "calibration" },
-            { MTConnectDeviceCommand.ConversionRequired, "conversionRequired" },
-            { MTConnectDeviceCommand.RelativeTime, "relativeTime" },
-            { MTConnectDeviceCommand.RealTime, "realTime" },
-            { MTConnectDeviceCommand.Device, "device" }, 
-            { MTConnectDeviceCommand.UUID, "uuid" }
+            { DeviceCommand.Manufacturer, "manufacturer" },
+            { DeviceCommand.Station, "station" },
+            { DeviceCommand.SerialNumber, "serialNumber" },
+            { DeviceCommand.Description, "description" },
+            { DeviceCommand.NativeName, "nativeName" },
+            { DeviceCommand.Calibration, "calibration" },
+            { DeviceCommand.ConversionRequired, "conversionRequired" },
+            { DeviceCommand.RelativeTime, "relativeTime" },
+            { DeviceCommand.RealTime, "realTime" },
+            { DeviceCommand.Device, "device" }, 
+            { DeviceCommand.UUID, "uuid" }
         };
         /// <summary>
         /// The listening thread for new connections
@@ -153,14 +133,14 @@ namespace MTConnect.Adapter
         /// port to 7878
         /// </summary>
         /// <param name="aPort">The optional port number (default: 7878)</param>
-        public MTCAdapter(int aPort = 7878, bool verbose = false) : this(new SystemTcpListenerProvider(IPAddress.Any, aPort), verbose) { }
+        public MTConnectAdapter(int aPort = 7878, bool verbose = false) : this(new SystemTcpListenerProvider(IPAddress.Any, aPort), verbose) { }
 
-        protected MTCAdapter(TcpListenerProvider tcpListenerProvider, bool verbose)
+        protected MTConnectAdapter(TcpListenerProvider tcpListenerProvider, bool verbose)
         {
             _tcpListener = tcpListenerProvider;
-            _commandsToSendOnConnect = new List<Tuple<MTConnectDeviceCommand, string>>();
-            _assetsToAdd = new List<Asset>();
-            _assetsToRemove = new List<Asset>();
+            _commandsToSendOnConnect = new List<Tuple<DeviceCommand, string>>();
+            _assetsToAdd = new List<IAsset>();
+            _assetsToRemove = new List<IAsset>();
             Heartbeat = 10000;
             Verbose = verbose;
             mClients = new List<Stream>();
@@ -229,11 +209,11 @@ namespace MTConnect.Adapter
         /// <summary>
         /// Sends a command to control the properties of a device on the adapter
         /// </summary>
-        public void SendCommand(MTConnectDeviceCommand command, string value, bool sendOnNewClientConnect = true)
+        public void SendCommand(DeviceCommand command, string value, bool sendOnNewClientConnect = true)
         {
             if (sendOnNewClientConnect)
             {
-                _commandsToSendOnConnect.Add(new Tuple<MTConnectDeviceCommand, string>(command, value));
+                _commandsToSendOnConnect.Add(new Tuple<DeviceCommand, string>(command, value));
             }
             string commandLine = $"* {_commandConverter[command]}: {value}\n";
             byte[] message = mEncoder.GetBytes(commandLine.ToCharArray());
@@ -308,7 +288,7 @@ namespace MTConnect.Adapter
             mBegun = false;
         }
 
-        private string MakeAddAssetString(Asset asset)
+        private string MakeAddAssetString(IAsset asset)
         {
             StringBuilder result = new StringBuilder();
             
@@ -317,7 +297,7 @@ namespace MTConnect.Adapter
             result.Append("|@ASSET@|");
             result.Append(asset.AssetId);
             result.Append('|');
-            result.Append(asset.GetMTCType());
+            result.Append(asset.AssetType);
             result.Append("|--multiline--ABCD\n");
 
             XmlWriterSettings settings = new XmlWriterSettings();
@@ -334,7 +314,7 @@ namespace MTConnect.Adapter
         /// Send a new asset to the Agent
         /// </summary>
         /// <param name="asset">The asset</param>
-        public void AddAsset(Asset asset, bool sendOnNewClientConnect = true)
+        public void AddAsset(IAsset asset, bool sendOnNewClientConnect = true)
         {
             if (sendOnNewClientConnect)
             {
@@ -344,7 +324,7 @@ namespace MTConnect.Adapter
             SendToAll(MakeAddAssetString(asset));
         }
         
-        private string MakeRemoveAssetString(Asset asset)
+        private string MakeRemoveAssetString(IAsset asset)
         {
             StringBuilder result = new StringBuilder();
             
@@ -360,7 +340,7 @@ namespace MTConnect.Adapter
         /// Mark an  asset as removed on the Agent
         /// </summary>
         /// <param name="asset">The asset</param>
-        public void RemoveAsset(Asset asset, bool sendOnNewClientConnect = true)
+        public void RemoveAsset(IAsset asset, bool sendOnNewClientConnect = true)
         {
             if (sendOnNewClientConnect)
             {
@@ -614,18 +594,18 @@ namespace MTConnect.Adapter
                     clientThread.Start(client);
 
                     SendAllTo(client.GetStream());
-                    foreach(Tuple<MTConnectDeviceCommand, string> tuple in _commandsToSendOnConnect)
+                    foreach(Tuple<DeviceCommand, string> tuple in _commandsToSendOnConnect)
                     {
                         SendCommand(tuple.Item1, tuple.Item2, false);
                     }
                     byte[] assetMessage;
-                    foreach(Asset a in _assetsToAdd)
+                    foreach(IAsset a in _assetsToAdd)
                     {
                         assetMessage = mEncoder.GetBytes(MakeAddAssetString(a));
                         WriteToClient(client.GetStream(), assetMessage);
 
                     }
-                    foreach(Asset a in _assetsToRemove)
+                    foreach(IAsset a in _assetsToRemove)
                     {
                         assetMessage = mEncoder.GetBytes(MakeRemoveAssetString(a));
                         WriteToClient(client.GetStream(), assetMessage);
