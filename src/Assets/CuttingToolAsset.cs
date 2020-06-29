@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright Copyright 2012, System Insights, Inc.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +25,7 @@ namespace AdapterLab
     /// <summary>
     /// An abstraction around an XML Generator for a cutting tool asset
     /// </summary>
-    public class CuttingTool : Asset
+    public class CuttingToolAsset : IAsset
     {
         public const double CT_NULL = Double.NaN;
         /// <summary>
@@ -352,6 +352,8 @@ namespace AdapterLab
 
         public string AssetId { get; }
 
+        public string AssetType => throw new NotImplementedException();
+
         protected HashSet<Property> mProperties = new HashSet<Property>();
         protected HashSet<Measurement> mMeasurements = new HashSet<Measurement>();
         protected List<CuttingItem> mItems = new List<CuttingItem>();
@@ -362,7 +364,7 @@ namespace AdapterLab
         /// <param name="assetId">The asset id</param>
         /// <param name="toolId">The tool id</param>
         /// <param name="serialNumber">The serial number of the tool</param>
-        public CuttingTool(string assetId, string toolId, string serialNumber)
+        public CuttingToolAsset(string assetId, string toolId, string serialNumber)
         {
             AssetId = assetId;
             ToolId = toolId;
