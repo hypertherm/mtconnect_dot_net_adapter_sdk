@@ -37,7 +37,7 @@ namespace MTConnect.Adapter
         /// Add a data item to the adapter
         /// </summary>
         /// <param name="aDI">The data item for the adapter to begin tracking</param>
-        void AddDataItem(DataItem aDI);
+        void AddDataItem(IDatum datum);
 
         /// <summary>
         /// Start the TCP sever for the Agent to connect to
@@ -58,7 +58,7 @@ namespace MTConnect.Adapter
         /// Remove the data item from the adapter
         /// </summary>
         /// <param name="aItem">The data item for the adapter to cease tracking</param>
-        void RemoveDataItem(DataItem aItem);
+        void RemoveDataItem(IDatum datum);
 
         /// <summary>
         /// Marks an Asset as removed

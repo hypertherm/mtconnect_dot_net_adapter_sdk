@@ -84,7 +84,7 @@ namespace MTConnect.Adapter
         /// <summary>
         /// All the data items we're tracking.
         /// </summary>
-        protected List<DataItem> mDataItems = new List<DataItem>();
+        protected List<IDatum> mDataItems = new List<IDatum>();
 
         /// <summary>
         /// The heartbeat interval.
@@ -160,10 +160,10 @@ namespace MTConnect.Adapter
         /// <summary>
         /// Add a data item to the adapter.
         /// </summary>
-        /// <param name="aDI">The data item.</param>
-        public void AddDataItem(DataItem aDI)
+        /// <param name="dataItem">The data item.</param>
+        public void AddDataItem(IDatum dataItem)
         {
-            mDataItems.Add(aDI);
+            mDataItems.Add(dataItem);
         }
 
         /// <summary>
@@ -178,7 +178,7 @@ namespace MTConnect.Adapter
         /// Remove a data item from the adapter.
         /// </summary>
         /// <param name="aItem"></param>
-        public void RemoveDataItem(DataItem aItem)
+        public void RemoveDataItem(IDatum aItem)
         {
             int ind = mDataItems.IndexOf(aItem);
             if (ind >= 0)
@@ -190,8 +190,8 @@ namespace MTConnect.Adapter
         /// </summary>
         public void Unavailable()
         {
-            foreach (DataItem di in mDataItems)
-                di.Unavailable();
+            foreach (IDatum di in mDataItems)
+                di.SetUnavailable();
         }
 
         /// <summary>
@@ -202,8 +202,8 @@ namespace MTConnect.Adapter
         /// </summary>
         public void Begin()
         {
-            mBegun = true;
-            foreach (DataItem di in mDataItems) di.Begin();
+            // mBegun = true;
+            // foreach (IDatum di in mDataItems) di.Begin();
         }
 
         /// <summary>
@@ -236,21 +236,21 @@ namespace MTConnect.Adapter
         /// <param name="markAndSweek"></param>
         public void SendChanged(String timestamp = null)
         {
-            if (mBegun)
-                foreach (DataItem di in mDataItems) di.Prepare();
+            // if (mBegun)
+            //     foreach (IDatum di in mDataItems) di.Prepare();
 
             // Separate out the data items into those that are on one line and those
             // need separate lines.
-            List<DataItem> together = new List<DataItem>();
-            List<DataItem> separate = new List<DataItem>();
-            foreach (DataItem di in mDataItems)
-            {
-                List<DataItem> list = di.ItemList();
-                if (di.NewLine)
-                    separate.AddRange(list);
-                else
-                    together.AddRange(list);
-            }
+            List<IDatum> together = new List<IDatum>();
+            List<IDatum> separate = new List<IDatum>();
+            // foreach (IDatum di in mDataItems)
+            // {
+            //     List<IDatum> list = di.ItemList();
+            //     if (di.NewLine)
+            //         separate.AddRange(list);
+            //     else
+            //         together.AddRange(list);
+            // }
 
             // Compone all the same line data items onto one line.
             string line;
@@ -262,7 +262,7 @@ namespace MTConnect.Adapter
             if (together.Count > 0)
             {
                 line = timestamp;
-                foreach (DataItem di in together)
+                foreach (IDatum di in together)
                     line += "|" + di.ToString();
                 line += "\n";
 
@@ -272,7 +272,7 @@ namespace MTConnect.Adapter
             // Now write out all the separate lines
             if (separate.Count > 0)
             {
-                foreach (DataItem di in separate)
+                foreach (IDatum di in separate)
                 {
                     line = timestamp;
                     line += "|" + di.ToString() + "\n";
@@ -284,7 +284,7 @@ namespace MTConnect.Adapter
             FlushAll();
 
             // Cleanup
-            foreach (DataItem di in mDataItems) di.Cleanup();
+            // foreach (IDatum di in mDataItems) di.Cleanup();
             mBegun = false;
         }
 
@@ -371,15 +371,15 @@ namespace MTConnect.Adapter
         {
             lock (aClient)
             {
-                List<DataItem> together = new List<DataItem>();
-                List<DataItem> separate = new List<DataItem>();
-                foreach (DataItem di in mDataItems.ToArray())
+                List<IDatum> together = new List<IDatum>();
+                List<IDatum> separate = new List<IDatum>();
+                foreach (IDatum di in mDataItems.ToArray())
                 {
-                    List<DataItem> list = di.ItemList(true);
-                    if (di.NewLine)
-                        separate.AddRange(list);
-                    else
-                        together.AddRange(list);
+                    // List<IDatum> list = di.ItemList(true);
+                    // if (di.NewLine)
+                    //     separate.AddRange(list);
+                    // else
+                    //     together.AddRange(list);
                 }
 
 
@@ -387,14 +387,14 @@ namespace MTConnect.Adapter
                 String timestamp = now.ToString("yyyy-MM-dd\\THH:mm:ss.fffffffK");
 
                 String line = timestamp;
-                foreach (DataItem di in together)
+                foreach (IDatum di in together)
                     line += "|" + di.ToString();
                 line += "\n";
 
                 byte[] message = mEncoder.GetBytes(line.ToCharArray());
                 aClient.Write(message, 0, message.Length);
 
-                foreach (DataItem di in separate)
+                foreach (IDatum di in separate)
                 {
                     line = timestamp;
                     line += "|" + di.ToString() + "\n";
