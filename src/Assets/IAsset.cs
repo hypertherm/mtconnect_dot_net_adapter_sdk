@@ -19,14 +19,20 @@ using System.Xml;
 namespace MTConnect.Assets
 {
     /// <summary>
-    /// Abstract Asset class.
+    /// Interface for an MTConnect Asset.
     /// </summary>
-    public interface Asset
+    public interface IAsset
     {
+        /// <value></value>
         string AssetId { get; }
+        /// <value></value>
+        string AssetType { get; }
 
+        /// <summary>
+        /// Write the Asset as an XML
+        /// </summary>
+        /// <param name="writer">An <see cref="System.Xml.XmlWriter"/> that is used to output the asset structure.</param>
+        /// <returns>An <see cref="System.Xml.XmlWriter"/> which is wrapped by pre-existing tags.</returns>
         XmlWriter ToXml(XmlWriter writer);
-
-        string GetMTCType();
     }
 }
