@@ -1,36 +1,84 @@
-﻿// /*
-//  * Copyright Copyright 2012, System Insights, Inc.
-//  *
-//  *    Licensed under the Apache License, Version 2.0 (the "License");
-//  *    you may not use this file except in compliance with the License.
-//  *    You may obtain a copy of the License at
-//  *
-//  *       http://www.apache.org/licenses/LICENSE-2.0
-//  *
-//  *    Unless required by applicable law or agreed to in writing, software
-//  *    distributed under the License is distributed on an "AS IS" BASIS,
-//  *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  *    See the License for the specific language governing permissions and
-//  *    limitations under the License.
-//  */
-// using MTConnect.Adapter;
-// using Moq;
-// using MTConnect.Adapter.Providers.TcpClient;
-// using MTConnect.Adapter.Providers.TcpListener;
-// using NUnit.Framework;
-// using System.IO;
-// using System.Net;
-// using System.Net.Sockets;
-// using System.Text;
-// using System.Threading;
-// using MTConnect.DataElements;
-// using MTConnect.Assets;
-// using System;
-// using FluentAssertions;
-// using System.Xml;
+/*
+ * Copyright Copyright 2012, System Insights, Inc.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+using FluentAssertions;
+using Moq;
+using MTConnect.Adapter;
+using MTConnect.Adapter.Providers.TcpClient;
+using MTConnect.Adapter.Providers.TcpListener;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading.Tasks;
+using Xunit;
 
-// namespace MTConnect.utests.Adapter
-// {
+namespace MTConnect.utests.Adapter
+{
+    public class MTConnectAdapterTests
+    {
+        private Mock<TcpClientProvider> _mockTcpClient;
+        private Mock<TcpListenerProvider> _mockTcpListener;
+        private Stream _tcpOutputStream;
+        public MTConnectAdapterTests()
+        {
+            _mockTcpListener = new Mock<TcpListenerProvider>();
+            _mockTcpClient = new Mock<TcpClientProvider>();
+            _mockTcpClient
+                .Setup(c => c.Client)
+                .Returns(new Socket(SocketType.Stream, ProtocolType.Tcp));
+            _mockTcpClient
+                .Setup(c => c.GetStream())
+                .Returns(new MemoryStream());
+            _mockTcpListener
+                .Setup(p => p.LocalEndpoint)
+                .Returns(new IPEndPoint(IPAddress.Any, 12367));
+            _mockTcpListener
+                .Setup(p => p.AcceptTcpClient())
+                .Returns(_mockTcpClient.Object);
+
+                _tcpOutputStream = new MemoryStream();
+        }
+
+        [Theory]
+        [InlineData(DeviceCommand.Manufacturer, "a", "manufacturer")]
+        [InlineData(DeviceCommand.Station, "a", "station")]
+        [InlineData(DeviceCommand.SerialNumber, "a", "serialNumber")]
+        [InlineData(DeviceCommand.Description, "a", "description")]
+        [InlineData(DeviceCommand.NativeName, "a", "nativeName")]
+        [InlineData(DeviceCommand.Calibration, "a", "calibration")]
+        [InlineData(DeviceCommand.ConversionRequired, "a", "conversionRequired")]
+        [InlineData(DeviceCommand.RelativeTime, "a", "relativeTime")]
+        [InlineData(DeviceCommand.RealTime, "a", "realTime")]
+        [InlineData(DeviceCommand.Device, "a", "device")]
+        [InlineData(DeviceCommand.UUID, "a", "uuid")]
+        public async Task CommandIssuedOnTcpStream(DeviceCommand command, string value, string expectedCommandName)
+        {
+            // throw new NotImplementedException();
+            MTConnectAdapter uut = new MTConnectAdapter(_mockTcpListener.Object, false);
+            uut.addClientStream(_tcpOutputStream);
+            uut.SendCommand(command, "a", false);
+
+            _tcpOutputStream.Seek(0, SeekOrigin.Begin);
+            StreamReader tcpOutputReader = new StreamReader(_tcpOutputStream);
+            string actual = await tcpOutputReader.ReadToEndAsync();
+            actual
+                .Should()
+                .Be($"* {expectedCommandName}: {value}\n");
+        }
+    }
+}
 //     [TestFixture]
 //     public class MTConnectAdapterTests : MTConnectAdapter
 //     {

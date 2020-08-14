@@ -132,12 +132,18 @@ namespace MTConnect.Adapter
         /// Create an adapter. Defaults the heartbeat to 10 seconds and the 
         /// port to 7878
         /// </summary>
-        /// <param name="aPort">The optional port number (default: 7878)</param>
-        public MTConnectAdapter(int aPort = 7878, bool verbose = false) : this(new SystemTcpListenerProvider(IPAddress.Any, aPort), verbose) { }
+        /// <param name="portNumber">The optional port number (default: 7878)</param>
+        /// <param name="verbose">Adapter verbosity setting</param>
+        public MTConnectAdapter(int portNumber = 7878, bool verbose = false) : this(new SystemTcpListenerProvider(IPAddress.Any, portNumber), verbose) { }
 
-        protected MTConnectAdapter(TcpListenerProvider tcpListenerProvider, bool verbose)
+        /// <summary>
+        /// Create an adapter. 
+        /// </summary>
+        /// <param name="tcpListener">A <see cref="TcpListenerProvider" /> which manages the TCP port used by the adapter.</param>
+        /// <param name="verbose">Adapter verbosity setting</param>
+        public MTConnectAdapter(TcpListenerProvider tcpListener, bool verbose)
         {
-            _tcpListener = tcpListenerProvider;
+            _tcpListener = tcpListener;
             _commandsToSendOnConnect = new List<Tuple<DeviceCommand, string>>();
             _assetsToAdd = new List<IAsset>();
             _assetsToRemove = new List<IAsset>();
@@ -386,19 +392,22 @@ namespace MTConnect.Adapter
                 DateTime now = DateTime.UtcNow;
                 String timestamp = now.ToString("yyyy-MM-dd\\THH:mm:ss.fffffffK");
 
-                String line = timestamp;
-                foreach (IDatum di in together)
-                    line += "|" + di.ToString();
-                line += "\n";
+                if (together.Count > 0)
+                {
+                    string line = timestamp;
+                    foreach (IDatum di in together)
+                        line += "|" + di.ToString();
+                    line += "\n";
 
-                byte[] message = mEncoder.GetBytes(line.ToCharArray());
-                aClient.Write(message, 0, message.Length);
+                    byte[] message = mEncoder.GetBytes(line.ToCharArray());
+                    aClient.Write(message, 0, message.Length);
+                }
 
                 foreach (IDatum di in separate)
                 {
-                    line = timestamp;
+                    string line = timestamp;
                     line += "|" + di.ToString() + "\n";
-                    message = mEncoder.GetBytes(line.ToCharArray());
+                    byte[] message = mEncoder.GetBytes(line.ToCharArray());
                     WriteToClient(aClient, message);
                 }
 
