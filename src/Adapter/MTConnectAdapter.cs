@@ -94,7 +94,7 @@ namespace MTConnect.Adapter
         /// <summary>
         /// The send changed has begun and we are tracking conditions.
         /// </summary>
-        bool mBegun = false;
+        // bool mBegun = false;
 
         /// <summary>
         /// The ascii encoder for creating the messages.
@@ -291,7 +291,7 @@ namespace MTConnect.Adapter
 
             // Cleanup
             // foreach (IDatum di in mDataItems) di.Cleanup();
-            mBegun = false;
+            // mBegun = false;
         }
 
         private string MakeAddAssetString(IAsset asset)
