@@ -40,21 +40,20 @@ namespace MTConnect.DataElements.Events
         public bool SeparateLine => false;
 
         /// <summary>
-        /// 
+        /// Constructor for a new Event<T>
         /// </summary>
-        /// <param name="deviceName"></param
-        /// <param name="elementName"></param>
-        public Event(string elementName) : this(null, elementName) {}
+        /// <param name="datumName">The name of the data item</param>
+        public Event(string datumName) : this(null, datumName) {}
 
         /// <summary>
-        /// 
+        /// Constructor for a new Event<T>
         /// </summary>
-        /// <param name="deviceName"></param>
-        /// <param name="elementName"></param>
-        public Event(string deviceName, string elementName)
+        /// <param name="deviceName">The name of the device on the Agent for this SimpleCondition</param>
+        /// <param name="datumName">The name of the data item</param>
+        public Event(string deviceName, string datumName)
         {
             Device = deviceName;
-            Name = elementName;
+            Name = datumName;
             SetUnavailable();
         }
 
