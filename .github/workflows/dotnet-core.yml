@@ -8,8 +8,8 @@ on:
 
 env:
   DOTNET_VERSION: '5.0.x'  # set this to the dotnet version to use
-  GITHUB_PACKAGES_INDEX: 'https://nuget.pkg.github.com/hypertherm/index.json'
   BUILD_CONFIGURATION: 'Release'
+  NUGET_FEED: 'https://nuget.pkg.github.com/hypertherm/index.json'
 
 jobs:
   build:
@@ -31,7 +31,7 @@ jobs:
         NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-        source-url: ${{ env.GITHUB_PACKAGES_INDEX }}
+        source-url: ${{ env.NUGET_FEED }}
 
       # Use GitVersion to setup versioning for package details
     - name: Install GitVersion # From here: https://github.com/GitTools/actions
