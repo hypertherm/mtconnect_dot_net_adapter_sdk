@@ -7,8 +7,8 @@ on:
     branches: [ master ]
 
 env:
-  DOTNET_VERSION: '5.0.x'  # set this to the dotnet version to use
   BUILD_CONFIGURATION: 'Release'
+  DOTNET_VERSION: '5.0.x'  # set this to the dotnet version to use
   NUGET_FEED: 'https://nuget.pkg.github.com/hypertherm/index.json'
   NUGET_PACK_PATH: './nuget-output'
 
