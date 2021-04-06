@@ -1,4 +1,3 @@
-using MTConnect.Adapter;
 using MTConnect.Assets;
 using MTConnect.DataElements;
 using System.IO;
