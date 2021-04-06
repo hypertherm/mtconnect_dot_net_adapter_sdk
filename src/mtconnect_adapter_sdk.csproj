@@ -5,7 +5,6 @@
 
     <!-- Generate a NuGet package-->
     <PackageId>mtconnect_adapter_sdk</PackageId>
-    <VersionPrefix>0.3.0</VersionPrefix>
     <Authors>mtconnect, Hypertherm</Authors>
     <Company>Hypertherm</Company>
     <Description>MT Connect adapter for .NET </Description>
