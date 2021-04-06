@@ -10,6 +10,7 @@ env:
   DOTNET_VERSION: '5.0.x'  # set this to the dotnet version to use
   BUILD_CONFIGURATION: 'Release'
   NUGET_FEED: 'https://nuget.pkg.github.com/hypertherm/index.json'
+  NUGET_PACK_PATH: './nuget-output'
 
 jobs:
   build:
@@ -68,6 +69,13 @@ jobs:
     - name: Create package
       id: nuget_pack
       run: dotnet pack --configuration ${{ env.BUILD_CONFIGURATION }} -o ${{ env.NUGET_PACK_PATH }} --no-restore --no-build /p:Version=${{ steps.gitversion.outputs.nuGetVersion }}
+
+    - name: Archive NuGets artifacts
+      id: archive_nugets
+      uses: actions/upload-artifact@main
+      with:
+        name: NuGet-Packages
+        path: ${{ env.NUGET_PACK_PATH }}
 
     - name: Publish Packages
       id: publish_nugets
