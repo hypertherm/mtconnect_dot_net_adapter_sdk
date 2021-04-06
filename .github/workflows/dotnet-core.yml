@@ -6,13 +6,30 @@ on:
   pull_request:
     branches: [ master ]
 
+env:
+  DOTNET_VERSION: '5.0.x'  # set this to the dotnet version to use
+  GITHUB_PACKAGES_INDEX: 'https://nuget.pkg.github.com/hypertherm/index.json'
+  BUILD_CONFIGURATION: 'Release'
+
 jobs:
   build:
 
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v2
+    
+    - name: Checkout Repo
+      id: checkout
+      uses: actions/checkout@main
+      with:
+        fetch-depth: 0
+
+    - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
+      id: dotnet_setup
+      uses: actions/setup-dotnet@main
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        source-url: ${{ env.GITHUB_PACKAGES_INDEX }}
 
       # Use GitVersion to setup versioning for package details
     - name: Install GitVersion # From here: https://github.com/GitTools/actions
@@ -26,29 +43,30 @@ jobs:
       uses: gittools/actions/gitversion/execute@main
 
     - name: Print GitVersion computed
+      id: print_version_info
       run: |
         echo "LegacySemVer: ${{ steps.gitversion.outputs.legacySemVer }}"
         echo "AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
         
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 5.x
-        source-url: https://nuget.pkg.github.com/hypertherm/index.json
       env:
         NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        
+
     - name: Install dependencies
+      id: restore_dependencies
       run: dotnet restore
 
     - name: Build
-      run: dotnet build src/mtconnect_adapter_sdk.csproj --configuration Release --no-restore -p:Version="${{ steps.gitversion.outputs.assemblySemVer }}"
+      id: dotnet_build
+      run: dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore -p:Version="${{ steps.gitversion.outputs.assemblySemVer }}"
 
     - name: Test
-      run: dotnet test test/ --no-restore --verbosity normal
+      id: unit_test
+      run: dotnet test --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore --no-build --verbosity normal
 
     - name: Create package
-      run: dotnet pack src/mtconnect_adapter_sdk.csproj --configuration release -p:PackageVersion="${{ steps.gitversion.outputs.legacySemVer }}"
+      id: nuget_pack
+      run: dotnet pack --configuration ${{ env.BUILD_CONFIGURATION }} -o ${{ env.NUGET_PACK_PATH }} --no-restore --no-build /p:Version=${{ steps.gitversion.outputs.nuGetVersion }}
 
     - name: Publish Packages
+      id: publish_nugets
       run: dotnet nuget push '**/*.nupkg'
