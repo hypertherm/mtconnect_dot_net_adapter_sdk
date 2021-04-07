@@ -25,12 +25,6 @@ namespace MTConnect.Adapter
         /// <param name="asset">An asset </param>
         /// <param name="sendOnNewClientConnect">Should this be resent on  </param>
         void AddAsset(IAsset asset, bool sendOnNewClientConnect = true);
-
-        /// <summary>
-        /// Add an Agent to receive updates from this adapter
-        /// </summary>
-        /// <param name="aStream">The data item for the adapter to begin tracking</param>
-        void addClientStream(Stream aStream);
         
         /// <summary>
         /// Add a data item to the adapter

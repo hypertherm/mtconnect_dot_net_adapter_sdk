@@ -156,11 +156,35 @@ namespace MTConnect.Adapter
         /// <summary>
         /// For testing, add a io stream to the adapter.
         /// </summary>
-        /// <param name="aStream">A IO Stream</param>
-        public void addClientStream(Stream aStream)
+        /// <param name="clientStream">A IO Stream</param>
+        private void _initializeClientStream(Stream clientStream)
         {
-            mClients.Add(aStream);
-            SendAllTo(aStream);
+            // Add the client to the collection of clients
+            mClients.Add(clientStream);
+
+            // Send all of the data elements to the new client
+            SendAllTo(clientStream);
+
+            // Replay all of the commands to the client
+            foreach(Tuple<DeviceCommand, string> cmd in _commandsToSendOnConnect)
+            {
+                SendCommandClient(clientStream, cmd.Item1, cmd.Item2);
+            }
+
+            // Replay all of the asset additions and removals
+            byte[] assetMessage;
+            foreach(IAsset a in _assetsToAdd)
+            {
+                assetMessage = mEncoder.GetBytes(MakeAddAssetString(a));
+                WriteToClient(clientStream, assetMessage);
+
+            }
+
+            foreach(IAsset a in _assetsToRemove)
+            {
+                assetMessage = mEncoder.GetBytes(MakeRemoveAssetString(a));
+                WriteToClient(clientStream, assetMessage);
+            }
         }
 
         /// <summary>
@@ -221,19 +245,33 @@ namespace MTConnect.Adapter
             {
                 _commandsToSendOnConnect.Add(new Tuple<DeviceCommand, string>(command, value));
             }
-            string commandLine = $"* {_commandConverter[command]}: {value}\n";
-            byte[] message = mEncoder.GetBytes(commandLine.ToCharArray());
-
-            if (Verbose)
-                Console.WriteLine("Sending: " + commandLine);
-
+            
+            
             foreach (Stream client in mClients)
             {
                 lock (client)
                 {
-                    WriteToClient(client, message);
+                    SendCommandClient(client, command, value);
                 }
             }
+        }
+
+        public void SendCommandClient(Stream client, DeviceCommand command, string value)
+        {
+            // Construct the mmessage
+            string commandLine = $"* {_commandConverter[command]}: {value}\n";
+
+            // Debugging output
+            if (Verbose)
+            {
+                Console.WriteLine("Sending: " + commandLine);
+            }
+
+            // Convert it to a ASCII encoded bytestream
+            byte[] message = mEncoder.GetBytes(commandLine.ToCharArray());
+
+            // Send to a specific client
+            WriteToClient(client, message);
         }
 
         /// <summary>
@@ -597,28 +635,13 @@ namespace MTConnect.Adapter
                     //blocks until a client has connected to the server
                     TcpClientProvider client = _tcpListener.AcceptTcpClient();
                     
-                    //create a thread to handle communication 
+                    // Create a thread to handle communication 
                     //with connected client
                     Thread clientThread = new Thread(new ParameterizedThreadStart(HeartbeatClient));
                     clientThread.Start(client);
 
-                    SendAllTo(client.GetStream());
-                    foreach(Tuple<DeviceCommand, string> tuple in _commandsToSendOnConnect)
-                    {
-                        SendCommand(tuple.Item1, tuple.Item2, false);
-                    }
-                    byte[] assetMessage;
-                    foreach(IAsset a in _assetsToAdd)
-                    {
-                        assetMessage = mEncoder.GetBytes(MakeAddAssetString(a));
-                        WriteToClient(client.GetStream(), assetMessage);
+                    _initializeClientStream(client.GetStream());
 
-                    }
-                    foreach(IAsset a in _assetsToRemove)
-                    {
-                        assetMessage = mEncoder.GetBytes(MakeRemoveAssetString(a));
-                        WriteToClient(client.GetStream(), assetMessage);
-                    }
                     clientThread.Join();
                 }
             }

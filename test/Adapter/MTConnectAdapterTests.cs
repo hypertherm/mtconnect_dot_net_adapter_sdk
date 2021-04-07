@@ -21,6 +21,7 @@ using MTConnect.Adapter.Providers.TcpListener;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -30,7 +31,7 @@ namespace MTConnect.utests.Adapter
     {
         private Mock<TcpClientProvider> _mockTcpClient;
         private Mock<TcpListenerProvider> _mockTcpListener;
-        private Stream _tcpOutputStream;
+        private Mock<Stream> _mockTcpOutputStream;
         public MTConnectAdapterTests()
         {
             _mockTcpListener = new Mock<TcpListenerProvider>();
@@ -48,7 +49,7 @@ namespace MTConnect.utests.Adapter
                 .Setup(p => p.AcceptTcpClient())
                 .Returns(_mockTcpClient.Object);
 
-                _tcpOutputStream = new MemoryStream();
+            _mockTcpOutputStream = new Mock<Stream>();
         }
 
         [Theory]
@@ -63,19 +64,36 @@ namespace MTConnect.utests.Adapter
         [InlineData(DeviceCommand.RealTime, "a", "realTime")]
         [InlineData(DeviceCommand.Device, "a", "device")]
         [InlineData(DeviceCommand.UUID, "a", "uuid")]
-        public async Task CommandIssuedOnTcpStream(DeviceCommand command, string value, string expectedCommandName)
+        public void CommandIssuedOnAddClient(DeviceCommand command, string value, string expectedCommandName)
         {
             // throw new NotImplementedException();
             MTConnectAdapter uut = new MTConnectAdapter(_mockTcpListener.Object, false);
-            uut.addClientStream(_tcpOutputStream);
-            uut.SendCommand(command, "a", false);
+            uut.SendCommand(command, value);
 
-            _tcpOutputStream.Seek(0, SeekOrigin.Begin);
-            StreamReader tcpOutputReader = new StreamReader(_tcpOutputStream);
-            string actual = await tcpOutputReader.ReadToEndAsync();
-            actual
-                .Should()
-                .Be($"* {expectedCommandName}: {value}\n");
+            Mock<TcpClientProvider> mockTcpClientProvider = new Mock<TcpClientProvider>();
+            _mockTcpListener
+                .Setup(tl => tl.AcceptTcpClient())
+                .Returns(mockTcpClientProvider.Object);
+            
+            mockTcpClientProvider
+                .Setup(tc => tc.GetStream())
+                .Returns(_mockTcpOutputStream.Object);
+            
+            _mockTcpOutputStream
+                .Setup(tos => tos.Write(It.IsAny<byte[]>(), 0, It.IsAny<int>()))
+                .Callback<byte[], int, int>((bytemsg, start, length) =>
+                {
+                    string actual = Encoding.ASCII.GetString(bytemsg, 0, length);
+                        
+                    actual
+                        .Should()
+                        .Be($"* {expectedCommandName}: {value}\n");
+                    uut.Stop();               
+                });
+
+            uut.Start();
+
+            
         }
     }
 }
