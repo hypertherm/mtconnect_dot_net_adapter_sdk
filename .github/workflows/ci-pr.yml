@@ -28,11 +28,8 @@ jobs:
     - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
       id: dotnet_setup
       uses: actions/setup-dotnet@main
-      env:
-        NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-        source-url: ${{ env.NUGET_FEED }}
 
       # Use GitVersion to setup versioning for package details
     - name: Install GitVersion # From here: https://github.com/GitTools/actions
@@ -79,6 +76,9 @@ jobs:
         name: NuGet-Packages
         path: ${{ env.NUGET_PACK_PATH }}
 
-    - name: Publish Packages
-      id: publish_nugets
-      run: dotnet nuget push '**/*.nupkg'
+    - name: Push generated package to GitHub Packages
+      id: nuget_push_github_packages
+      run: |
+        ls "**/*.nupkg"
+        dotnet nuget add source ${{ env.NUGET_FEED }} -n hypertherm-org-github -u hypertherm -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
+        dotnet nuget push "**/*.nupkg" --source hypertherm-org-github --skip-duplicate --no-symbols true -k ${{ secrets.GITHUB_TOKEN }}
