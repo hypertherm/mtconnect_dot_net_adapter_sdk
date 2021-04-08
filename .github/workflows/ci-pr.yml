@@ -25,12 +25,6 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
-      id: dotnet_setup
-      uses: actions/setup-dotnet@main
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-
       # Use GitVersion to setup versioning for package details
     - name: Install GitVersion # From here: https://github.com/GitTools/actions
       id: install_gitversion
