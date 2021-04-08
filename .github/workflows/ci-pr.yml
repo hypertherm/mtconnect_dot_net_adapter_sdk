@@ -8,7 +8,6 @@ on:
 
 env:
   BUILD_CONFIGURATION: 'Release'
-  DOTNET_VERSION: '5.0.x'  # set this to the dotnet version to use
   NUGET_FEED: 'https://nuget.pkg.github.com/hypertherm/index.json'
   NUGET_PACK_PATH: './nuget-output'
 
@@ -18,7 +17,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    
+
     - name: Checkout Repo
       id: checkout
       uses: actions/checkout@main
@@ -61,7 +60,7 @@ jobs:
 
     - name: Create package
       id: nuget_pack
-      run: dotnet pack --configuration ${{ env.BUILD_CONFIGURATION }} -o ${{ env.NUGET_PACK_PATH }} --no-restore --no-build /p:Version=${{ steps.gitversion.outputs.nuGetVersion }}
+      run: dotnet pack --configuration ${{ env.BUILD_CONFIGURATION }} -o ${{ env.NUGET_PACK_PATH }} --no-restore --no-build -p:Version=${{ steps.gitversion.outputs.nuGetVersion }}
 
     - name: Archive NuGets artifacts
       id: archive_nugets
