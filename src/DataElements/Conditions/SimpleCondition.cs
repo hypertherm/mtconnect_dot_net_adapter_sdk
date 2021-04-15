@@ -39,6 +39,7 @@ namespace MTConnect.DataElements.Conditions
 
         /// <inheritdoc/>
         public bool Available { get; protected set; }
+        
         /// <inheritdoc/>
         public ICollection<ConditionValue> Value { get; protected set; }
 
@@ -47,6 +48,8 @@ namespace MTConnect.DataElements.Conditions
 
         /// <inheritdoc/>
         public bool SeparateLine => true;
+
+        public bool HasChanged => throw new NotImplementedException();
 
         /// <summary>
         /// Create a new condition without a specific device name
@@ -148,7 +151,7 @@ namespace MTConnect.DataElements.Conditions
         public override string ToString()
         {
             StringBuilder builder = new StringBuilder();
-            if (Value == null || Value.Count == 0)
+            if (!Available)
             {
                 builder.Append(
                     _timeProvider.Now

@@ -29,6 +29,8 @@ namespace MTConnect.DataElements.Samples
         /// <inheritdoc/>
         public bool Available { get; protected set; }
 
+        public bool HasChanged => throw new NotImplementedException();
+
         /// <inheritdoc/>
         public void SetUnavailable()
         {
