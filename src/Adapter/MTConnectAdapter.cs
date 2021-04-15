@@ -56,75 +56,70 @@ namespace MTConnect.Adapter
         /// <summary>
         /// The listening thread for new connections
         /// </summary>
-        protected Thread mListenThread;
+        protected Thread _listenThread;
 
         /// <summary>
         /// A list of all the client connections.
         /// </summary>
-        protected List<Stream> mClients;
+        protected List<Stream> _clients;
 
         /// <summary>
         /// A count of client threads.
         /// </summary>
-        protected CountdownEvent mActiveClients;
+        protected CountdownEvent _activeClients;
 
         /// <summary>
         /// A flag to indicate the adapter is still running.
         /// </summary>
-        protected bool mRunning = false;
+        protected bool _running = false;
 
         /// <summary>
         /// The server socket.
         /// </summary>
         protected TcpListenerProvider _tcpListener;
+        
         /// <summary>
         /// Timestamp for generator
         /// </summary>
         private ITimeProvider _timeProvider;
 
         /// <summary>
-        /// The * PONG ... text
-        /// </summary>
-        byte[] PONG;
-
-        /// <summary>
-        /// All the data items we're tracking.
-        /// </summary>
-        protected List<IDatum> mDataItems = new List<IDatum>();
-
-        /// <summary>
         /// The heartbeat interval.
         /// </summary>
-        int mHeartbeat;
-
-        /// <summary>
-        /// The send changed has begun and we are tracking conditions.
-        /// </summary>
-        // bool mBegun = false;
-
-        /// <summary>
-        /// The ascii encoder for creating the messages.
-        /// </summary>
-        ASCIIEncoding mEncoder = new ASCIIEncoding();
-
-        public bool Verbose { set; get; }
+        private int _heartbeatInterval;
 
         /// <summary>
         /// This is a method to set the heartbeat interval given in milliseconds.
         /// </summary>
         public int Heartbeat { 
-            get { return mHeartbeat; } 
+            get { return _heartbeatInterval; } 
             set { 
-                mHeartbeat = value;
-                ASCIIEncoding encoder = new ASCIIEncoding();
-                PONG = encoder.GetBytes("* PONG " + mHeartbeat.ToString() + "\n");
+                _heartbeatInterval = value;
+                _pongByteMessage = _encoder.GetBytes("* PONG " + _heartbeatInterval.ToString() + "\n");
             } 
         }
 
         /// <summary>
+        /// The * PONG ... text
+        /// </summary>
+        byte[] _pongByteMessage;
+
+        /// <summary>
+        /// All the data items we're tracking.
+        /// </summary>
+        protected List<IDatum> _datums = new List<IDatum>();
+
+        /// <summary>
+        /// The ascii encoder for creating the messages.
+        /// </summary>
+        private static ASCIIEncoding _encoder = new ASCIIEncoding();
+
+        public bool Verbose { set; get; }
+
+        /// <summary>
         /// Indicates if the adapter is currently running.
         /// </summary>
-        public bool Running => mRunning;
+        public bool Running => _running;
 
 
         /// <summary>
@@ -156,8 +151,8 @@ namespace MTConnect.Adapter
             _assetsToRemove = new List<IAsset>();
             Heartbeat = 10000;
             Verbose = verbose;
-            mClients = new List<Stream>();
-            mActiveClients = new CountdownEvent(1);
+            _clients = new List<Stream>();
+            _activeClients = new CountdownEvent(1);
         }
 
         /// <summary>
@@ -167,7 +162,7 @@ namespace MTConnect.Adapter
         private void _initializeClientStream(Stream clientStream)
         {
             // Add the client to the collection of clients
-            mClients.Add(clientStream);
+            _clients.Add(clientStream);
 
             // Send all of the data elements to the new client
             SendAllTo(clientStream);
@@ -182,14 +177,14 @@ namespace MTConnect.Adapter
             byte[] assetMessage;
             foreach(IAsset a in _assetsToAdd)
             {
-                assetMessage = mEncoder.GetBytes(MakeAddAssetString(a));
+                assetMessage = _encoder.GetBytes(MakeAddAssetString(a));
                 WriteToClient(clientStream, assetMessage);
 
             }
 
             foreach(IAsset a in _assetsToRemove)
             {
-                assetMessage = mEncoder.GetBytes(MakeRemoveAssetString(a));
+                assetMessage = _encoder.GetBytes(MakeRemoveAssetString(a));
                 WriteToClient(clientStream, assetMessage);
             }
         }
@@ -200,7 +195,7 @@ namespace MTConnect.Adapter
         /// <param name="dataItem">The data item.</param>
         public void AddDataItem(IDatum dataItem)
         {
-            mDataItems.Add(dataItem);
+            _datums.Add(dataItem);
         }
 
         /// <summary>
@@ -208,7 +203,7 @@ namespace MTConnect.Adapter
         /// </summary>
         public void RemoveAllDataItems()
         {
-            mDataItems.Clear();
+            _datums.Clear();
         }
 
         /// <summary>
@@ -217,9 +212,9 @@ namespace MTConnect.Adapter
         /// <param name="aItem"></param>
         public void RemoveDataItem(IDatum aItem)
         {
-            int ind = mDataItems.IndexOf(aItem);
+            int ind = _datums.IndexOf(aItem);
             if (ind >= 0)
-                mDataItems.RemoveAt(ind);
+                _datums.RemoveAt(ind);
         }
 
         /// <summary>
@@ -227,7 +222,7 @@ namespace MTConnect.Adapter
         /// </summary>
         public void Unavailable()
         {
-            foreach (IDatum di in mDataItems)
+            foreach (IDatum di in _datums)
                 di.SetUnavailable();
         }
 
@@ -238,10 +233,7 @@ namespace MTConnect.Adapter
         /// the adapter will not perform the mark and sweep.
         /// </summary>
         public void Begin()
-        {
-            // mBegun = true;
-            // foreach (IDatum di in mDataItems) di.Begin();
-        }
+        {}
 
         /// <summary>
         /// Sends a command to control the properties of a device on the adapter
@@ -254,7 +246,7 @@ namespace MTConnect.Adapter
             }
             
             
-            foreach (Stream client in mClients)
+            foreach (Stream client in _clients)
             {
                 lock (client)
                 {
@@ -275,7 +267,7 @@ namespace MTConnect.Adapter
             }
 
             // Convert it to a ASCII encoded bytestream
-            byte[] message = mEncoder.GetBytes(commandLine.ToCharArray());
+            byte[] message = _encoder.GetBytes(commandLine.ToCharArray());
 
             // Send to a specific client
             WriteToClient(client, message);
@@ -303,17 +295,14 @@ namespace MTConnect.Adapter
 
             builder.AppendLine();
             
+            // Write each SeparateLine == true item on its own line
             foreach (IDatum item in _datums.Where(datum => datum.SeparateLine && datum.HasChanged))
             {
                 item.AddToUpdate(builder);
             }
 
             // Flush the output
-            FlushAll();
-
-            // Cleanup
-            // foreach (IDatum di in mDataItems) di.Cleanup();
-            // mBegun = false;
+            // FlushAll();
         }
 
         private string MakeAddAssetString(IAsset asset)
@@ -384,7 +373,7 @@ namespace MTConnect.Adapter
         /// </summary>
         public void FlushAll()
         {
-            foreach (Stream client in mClients)
+            foreach (Stream client in _clients)
                 client.Flush();
 
         }
@@ -401,7 +390,7 @@ namespace MTConnect.Adapter
             {
                 List<IDatum> together = new List<IDatum>();
                 List<IDatum> separate = new List<IDatum>();
-                foreach (IDatum di in mDataItems.ToArray())
+                foreach (IDatum di in _datums.ToArray())
                 {
                     // List<IDatum> list = di.ItemList(true);
                     // if (di.NewLine)
@@ -421,7 +410,7 @@ namespace MTConnect.Adapter
                         line += "|" + di.ToString();
                     line += "\n";
 
-                    byte[] message = mEncoder.GetBytes(line.ToCharArray());
+                    byte[] message = _encoder.GetBytes(line.ToCharArray());
                     aClient.Write(message, 0, message.Length);
                 }
 
@@ -429,7 +418,7 @@ namespace MTConnect.Adapter
                 {
                     string line = timestamp;
                     line += "|" + di.ToString() + "\n";
-                    byte[] message = mEncoder.GetBytes(line.ToCharArray());
+                    byte[] message = _encoder.GetBytes(line.ToCharArray());
                     WriteToClient(aClient, message);
                 }
 
@@ -443,10 +432,10 @@ namespace MTConnect.Adapter
         /// <param name="line">A line of text</param>
         public void SendToAll(string line)
         {
-            byte[] message = mEncoder.GetBytes(line.ToCharArray());
+            byte[] message = _encoder.GetBytes(line.ToCharArray());
             if (Verbose)
                 Console.WriteLine("Sending: " + line);
-            foreach (Stream client in mClients)
+            foreach (Stream client in _clients)
             {
                 lock (client)
                 {
@@ -463,13 +452,13 @@ namespace MTConnect.Adapter
         protected bool Receive(Stream aClient, String aLine)
         {
             bool heartbeat = false;
-            if (aLine.StartsWith("* PING") && mHeartbeat > 0)
+            if (aLine.StartsWith("* PING") && _heartbeatInterval > 0)
             {
                 heartbeat = true;
                 lock (aClient)
                 {
                     // Console.WriteLine("Received PING, sending PONG");
-                    WriteToClient(aClient, PONG);
+                    WriteToClient(aClient, _pongByteMessage);
                     aClient.Flush();
                 }
             }
@@ -497,7 +486,7 @@ namespace MTConnect.Adapter
                 catch (Exception f) {
                     Console.WriteLine("Error during close: " + f.Message);
                 }
-                mClients.Remove(aClient);
+                _clients.Remove(aClient);
             }
         }
 
@@ -513,10 +502,10 @@ namespace MTConnect.Adapter
         /// <param name="client">The client we are communicating with.</param>
         protected void HeartbeatClient(object obj)
         {
-            mActiveClients.AddCount();
+            _activeClients.AddCount();
             TcpClientProvider client = (TcpClientProvider) obj;
             Stream clientStream = client.GetStream();
-            mClients.Add(clientStream);
+            _clients.Add(clientStream);
             List<Socket> readList = new List<Socket>();
             bool heartbeatActive = false;
 
@@ -526,7 +515,7 @@ namespace MTConnect.Adapter
 
             try
             {
-                while (mRunning && client.Connected)
+                while (_running && client.Connected)
                 {
                     int bytesRead = 0;
 
@@ -534,8 +523,8 @@ namespace MTConnect.Adapter
                     {
                         readList.Clear();
                         readList.Add(client.Client);
-                        if (mHeartbeat > 0 && heartbeatActive)
-                            Socket.Select(readList, null, null, mHeartbeat * 2000);
+                        if (_heartbeatInterval > 0 && heartbeatActive)
+                            Socket.Select(readList, null, null, _heartbeatInterval * 2000);
                         if (readList.Count == 0 && heartbeatActive)
                         {
                             Console.WriteLine("Heartbeat timed out, closing connection\n");
@@ -593,14 +582,14 @@ namespace MTConnect.Adapter
             {
                 try
                 {
-                    mClients.Remove(clientStream);
+                    _clients.Remove(clientStream);
                     client.Close();
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine("Error during heartbeat cleanup: " + e.Message);
                 }
-                mActiveClients.Signal();
+                _activeClients.Signal();
             }
         }
 
@@ -610,11 +599,11 @@ namespace MTConnect.Adapter
         /// </summary>
         protected void ListenForClients()
         {
-            mRunning = true;
+            _running = true;
 
             try
             {
-                while (mRunning)
+                while (_running)
                 {
                     //blocks until a client has connected to the server
                     TcpClientProvider client = _tcpListener.AcceptTcpClient();
@@ -636,7 +625,7 @@ namespace MTConnect.Adapter
 
             finally
             {
-                mRunning = false;
+                _running = false;
                 _tcpListener.Stop();
             }
         }
@@ -646,10 +635,10 @@ namespace MTConnect.Adapter
         /// </summary>
         public void Start()
         {
-            if (!mRunning) {
+            if (!_running) {
                 _tcpListener.Start();
-                mListenThread = new Thread(new ThreadStart(ListenForClients));
-                mListenThread.Start();
+                _listenThread = new Thread(new ThreadStart(ListenForClients));
+                _listenThread.Start();
             }
         }
 
@@ -658,21 +647,21 @@ namespace MTConnect.Adapter
         /// </summary>
         public void Stop()
         {
-            if (mRunning) {
-                mRunning = false;
+            if (_running) {
+                _running = false;
 
                 // Wait 2 seconds for the thread to exit.
-                mListenThread.Join(2*Heartbeat);
+                _listenThread.Join(2*Heartbeat);
 
-                foreach (Object obj in mClients)
+                foreach (Object obj in _clients)
                 {
                     Stream client = (Stream)obj;
                     client.Close();
                 }
-                mClients.Clear();
+                _clients.Clear();
 
                 // Wait for all client threads to exit.
-                mActiveClients.Wait(2000);
+                _activeClients.Wait(2000);
             }
         }
     }
