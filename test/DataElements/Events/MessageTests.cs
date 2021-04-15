@@ -15,6 +15,7 @@
  */
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using FluentAssertions;
 using MTConnect.DataElements.Events;
 using Xunit;
@@ -61,7 +62,6 @@ namespace MTConnect.utests
 
             IEnumerator IEnumerable.GetEnumerator() => (IEnumerator) GetEnumerator();
         }
-
         
         [Fact]
         public void SetToUnavailableMakesUnavailable()
@@ -80,9 +80,40 @@ namespace MTConnect.utests
             Message uut = new Message("testElement");
             uut.Set(new MessageValue { NativeCode = "native", Message = "associated message"});
             uut.Available.Should().BeTrue();
+            uut.AddToUpdate(new StringBuilder());
             uut.SetUnavailable();
             uut.Available.Should().BeFalse();
             uut.Value.Should().Be(MessageValue.Unavailable);
+            uut.HasChanged.Should().BeTrue();
+        }
+
+        [Fact]
+        public void HasChangedOnCreation()
+        {
+            Message uut = new Message("a");
+            uut.HasChanged.Should().BeTrue();
+        }
+
+        [Fact]
+        public void AddToUpdateNoWriteOnNoChange()
+        {
+            Message uut = new Message("a");
+            StringBuilder stringBuilder = new StringBuilder();
+            uut.Set(new MessageValue { NativeCode = "native", Message = "associated message" });
+            uut.AddToUpdate(stringBuilder);
+            stringBuilder.ToString().Should().Be("a|native|associated message");
+            stringBuilder.Clear();
+            uut.AddToUpdate(stringBuilder);
+            stringBuilder.ToString().Should().Be("");
+        }
+
+        [Fact]
+        public void AddToUpdateModifiesHasChanged()
+        {
+            Message uut = new Message("a");
+            uut.HasChanged.Should().BeTrue();
+            uut.AddToUpdate(new StringBuilder());
+            uut.HasChanged.Should().BeFalse();
         }
     }
 }

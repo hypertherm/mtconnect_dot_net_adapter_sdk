@@ -41,6 +41,7 @@ namespace MTConnect.DataElements.Events
             Device = deviceName;
             Name = elementName;
             SetUnavailable();
+            HasChanged = true;
         }
 
         /// <inheritdoc/>
@@ -48,6 +49,7 @@ namespace MTConnect.DataElements.Events
 
         /// <inheritdoc/>
         public string Name { get; }
+        private MessageValue _lastValue;
 
         /// <inheritdoc/>
         public MessageValue Value { get; protected set;}
@@ -61,13 +63,13 @@ namespace MTConnect.DataElements.Events
         /// <inheritdoc/>
         public bool Available { get; protected set; }
 
-        public bool HasChanged => throw new NotImplementedException();
+        /// <inheritdoc/>
+        public bool HasChanged { get; private set; }
 
         /// <inheritdoc/>
         public void SetUnavailable()
         {
-            Available = false;
-            Value = MessageValue.Unavailable;
+            Set(MessageValue.Unavailable);
         }
 
         /// <inheritdoc/>
@@ -79,7 +81,16 @@ namespace MTConnect.DataElements.Events
         /// <inheritdoc/>
         public void AddToUpdate(StringBuilder builder)
         {
-            builder.Append(ToString());
+            // Only add to update if changed
+            if (HasChanged)
+            {
+                // Update the last value sent
+                _lastValue = Value;
+
+                builder.Append(ToString());
+                
+                HasChanged = false;
+            }
         }
 
         /// <inheritdoc/>
@@ -105,13 +116,18 @@ namespace MTConnect.DataElements.Events
         {
             if (value == null || value.Equals(MessageValue.Unavailable))
             {
-                SetUnavailable();
+                Available = false;
+                Value = MessageValue.Unavailable;
             }
             else
             {
                 Available = true;
                 Value = value;
             }
+            
+            // If the value has EVER changed since the last call to AddToUpdate()
+            // then we should mark this changed and resend the data (indicating the value has changed) 
+            HasChanged = HasChanged || (_lastValue == null && Value != null) || (_lastValue != null && !_lastValue.Equals(Value));
         }
     }
 }
