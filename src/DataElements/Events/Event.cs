@@ -72,8 +72,7 @@ namespace MTConnect.DataElements.Events
         /// <inheritdoc/>
         public void SetUnavailable()
         {
-            Available = false;
-            Value = default(T);
+            Set(default(T));
         }
 
         public override string ToString()
@@ -122,7 +121,8 @@ namespace MTConnect.DataElements.Events
         {
             if (value == null || value.Equals(default(T)))
             {
-                SetUnavailable();
+                Available = false;
+                Value = default(T);
             }
             else
             {
@@ -132,7 +132,7 @@ namespace MTConnect.DataElements.Events
 
             // If the value has EVER changed since the last call to AddToUpdate()
             // then we should mark this changed and resend the data (indicating the value has changed) 
-            HasChanged = HasChanged || !_lastValue.Equals(Value);
+            HasChanged = HasChanged || (default(T) == null && _lastValue == null && Value == null) || (default(T) != null && !_lastValue.Equals(Value));
         }
 
         /// <inheritdoc/>
