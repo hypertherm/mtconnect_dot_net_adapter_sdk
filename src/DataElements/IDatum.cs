@@ -46,6 +46,11 @@ namespace MTConnect.DataElements
         object Value { get; }
 
         /// <summary>
+        /// Determines whether the value has changed since the last call to <cref see="IDatum.AddToUpdate(StringBuilder builder)" />.
+        /// </summary>
+        bool HasChanged { get; }
+
+        /// <summary>
         /// Access whether this data element should appear on its own line.
         /// </summary>
         /// <value>Access whether this data element should appear on its own line.</value>

@@ -8,7 +8,7 @@ namespace MTConnect.Utilities.Time
     public class SystemTime: ITimeProvider
     {
         /// <inheritdoc />
-        public DateTime Now => DateTime.Now;
+        public DateTime Now => DateTime.Now.ToUniversalTime();
 
         /// <summary>
         /// Constructor for the <see cref="SystemTime" />

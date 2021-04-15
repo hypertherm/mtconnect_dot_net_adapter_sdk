@@ -18,6 +18,9 @@ using Moq;
 using MTConnect.Adapter;
 using MTConnect.Adapter.Providers.TcpClient;
 using MTConnect.Adapter.Providers.TcpListener;
+using MTConnect.DataElements;
+using MTConnect.Utilities.Time;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -29,8 +32,11 @@ namespace MTConnect.utests.Adapter
 {
     public class MTConnectAdapterTests
     {
+        private MTConnectAdapter uut;
         private Mock<TcpClientProvider> _mockTcpClient;
+        private Mock<ITimeProvider> _mockTimeProvider;
         private Mock<TcpListenerProvider> _mockTcpListener;
+        private  Mock<TcpClientProvider> _mockTcpClientProvider;
         private Mock<Stream> _mockTcpOutputStream;
         public MTConnectAdapterTests()
         {
@@ -50,6 +56,18 @@ namespace MTConnect.utests.Adapter
                 .Returns(_mockTcpClient.Object);
 
             _mockTcpOutputStream = new Mock<Stream>();
+            _mockTimeProvider = new Mock<ITimeProvider>();
+            _mockTcpClientProvider = new Mock<TcpClientProvider>();
+            
+            _mockTcpListener
+                .Setup(tl => tl.AcceptTcpClient())
+                .Returns(_mockTcpClientProvider.Object);
+            
+            _mockTcpClientProvider
+                .Setup(tc => tc.GetStream())
+                .Returns(_mockTcpOutputStream.Object);
+
+            uut = new MTConnectAdapter(_mockTcpListener.Object, _mockTimeProvider.Object, false);
         }
 
         [Theory]
@@ -66,19 +84,8 @@ namespace MTConnect.utests.Adapter
         [InlineData(DeviceCommand.UUID, "a", "uuid")]
         public void CommandIssuedOnAddClient(DeviceCommand command, string value, string expectedCommandName)
         {
-            // throw new NotImplementedException();
-            MTConnectAdapter uut = new MTConnectAdapter(_mockTcpListener.Object, false);
             uut.SendCommand(command, value);
 
-            Mock<TcpClientProvider> mockTcpClientProvider = new Mock<TcpClientProvider>();
-            _mockTcpListener
-                .Setup(tl => tl.AcceptTcpClient())
-                .Returns(mockTcpClientProvider.Object);
-            
-            mockTcpClientProvider
-                .Setup(tc => tc.GetStream())
-                .Returns(_mockTcpOutputStream.Object);
-            
             _mockTcpOutputStream
                 .Setup(tos => tos.Write(It.IsAny<byte[]>(), 0, It.IsAny<int>()))
                 .Callback<byte[], int, int>((bytemsg, start, length) =>
@@ -88,12 +95,94 @@ namespace MTConnect.utests.Adapter
                     actual
                         .Should()
                         .Be($"* {expectedCommandName}: {value}\n");
-                    uut.Stop();               
+                    uut.Stop();
                 });
 
             uut.Start();
+        }
 
+        [Fact]
+        public void  SendChangedMessageGeneration()
+        {
+            Mock<IDatum> mockDatum1 = new Mock<IDatum>();
+            Mock<IDatum> mockDatum2 = new Mock<IDatum>();
+            Mock<IDatum> mockDatum3 = new Mock<IDatum>();
+            Mock<IDatum> mockDatum4 = new Mock<IDatum>();
+
+            _mockTimeProvider
+                .Setup(t => t.Now)
+                .Returns(new DateTime(2021, 1, 2, 4, 5, 6, DateTimeKind.Utc));
+
+            mockDatum1
+                .Setup(m => m.SeparateLine)
+                .Returns(false);
+            mockDatum1
+                .Setup(m => m.HasChanged)
+                .Returns(true);
+            mockDatum2
+                .Setup(m => m.SeparateLine)
+                .Returns(false);
+            mockDatum2
+                .Setup(m => m.HasChanged)
+                .Returns(false);
+            mockDatum3
+                .Setup(m => m.SeparateLine)
+                .Returns(true);
+            mockDatum3
+                .Setup(m => m.HasChanged)
+                .Returns(true);
+            mockDatum4
+                .Setup(m => m.SeparateLine)
+                .Returns(true);
+            mockDatum4
+                .Setup(m => m.HasChanged)
+                .Returns(false);
+
+            StringBuilder builder = new StringBuilder();
+            mockDatum1
+                .Setup(m => m.AddToUpdate(It.IsAny<StringBuilder>()))
+                .Callback<StringBuilder>( b =>
+                    {
+                        b.Append("|a|1");
+                        builder = b;
+                    }
+                );
+            mockDatum2
+                .Setup(m => m.AddToUpdate(It.IsAny<StringBuilder>()))
+                .Callback<StringBuilder>( b =>
+                    {
+                        b.Append("|b|2");
+                        builder = b;
+                    }
+                );
+            mockDatum3
+                .Setup(m => m.AddToUpdate(It.IsAny<StringBuilder>()))
+                .Callback<StringBuilder>( b =>
+                    {
+                        b.AppendLine("2021-01-02T04:05:06.000000Z|c|3");
+                        builder = b;
+                    }
+                );
+            mockDatum4
+                .Setup(m => m.AddToUpdate(It.IsAny<StringBuilder>()))
+                .Callback<StringBuilder>( b =>
+                    {
+                        b.AppendLine("2021-01-02T04:05:06.000000Z|d|4");
+                        builder = b;
+                    }
+                );
             
+            uut.AddDataItem(mockDatum1.Object);
+            uut.AddDataItem(mockDatum2.Object);
+            uut.AddDataItem(mockDatum3.Object);
+            uut.AddDataItem(mockDatum4.Object);
+
+            uut.SendChanged();
+
+            string actual = builder.ToString();
+            actual
+                .Should()
+                .Be("2021-01-02T04:05:06.000000Z|a|1\r\n2021-01-02T04:05:06.000000Z|c|3\r\n");
         }
     }
 }

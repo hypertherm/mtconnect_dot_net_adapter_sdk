@@ -26,6 +26,8 @@ using MTConnect.Adapter.Providers.TcpClient;
 using MTConnect.Adapter.Providers.TcpListener;
 using MTConnect.DataElements;
 using MTConnect.Assets;
+using System.Linq;
+using MTConnect.Utilities.Time;
 
 namespace MTConnect.Adapter
 {
@@ -75,6 +77,10 @@ namespace MTConnect.Adapter
         /// The server socket.
         /// </summary>
         protected TcpListenerProvider _tcpListener;
+        /// <summary>
+        /// Timestamp for generator
+        /// </summary>
+        private ITimeProvider _timeProvider;
 
         /// <summary>
         /// The * PONG ... text
@@ -134,16 +140,17 @@ namespace MTConnect.Adapter
         /// </summary>
         /// <param name="portNumber">The optional port number (default: 7878)</param>
         /// <param name="verbose">Adapter verbosity setting</param>
-        public MTConnectAdapter(int portNumber = 7878, bool verbose = false) : this(new SystemTcpListenerProvider(IPAddress.Any, portNumber), verbose) { }
+        public MTConnectAdapter(int portNumber = 7878, bool verbose = false) : this(new SystemTcpListenerProvider(IPAddress.Any, portNumber), new SystemTime(), verbose) { }
 
         /// <summary>
         /// Create an adapter. 
         /// </summary>
         /// <param name="tcpListener">A <see cref="TcpListenerProvider" /> which manages the TCP port used by the adapter.</param>
         /// <param name="verbose">Adapter verbosity setting</param>
-        public MTConnectAdapter(TcpListenerProvider tcpListener, bool verbose)
+        public MTConnectAdapter(TcpListenerProvider tcpListener, ITimeProvider timeProvider, bool verbose)
         {
             _tcpListener = tcpListener;
+            _timeProvider = timeProvider;
             _commandsToSendOnConnect = new List<Tuple<DeviceCommand, string>>();
             _assetsToAdd = new List<IAsset>();
             _assetsToRemove = new List<IAsset>();
@@ -273,55 +280,32 @@ namespace MTConnect.Adapter
             // Send to a specific client
             WriteToClient(client, message);
         }
-
-        /// <summary>
-        /// Send only the objects that need have changed to the clients.
-        /// </summary>
-        /// <param name="markAndSweek"></param>
-        public void SendChanged(String timestamp = null)
+        
+        /// <inheritdoc/>
+        public void SendChanged()
         {
-            // if (mBegun)
-            //     foreach (IDatum di in mDataItems) di.Prepare();
+            SendChanged(_timeProvider.Now);
+        }
+        
+        /// <inheritdoc/>
+        public void SendChanged(DateTime timestamp)
+        {
+            string timestampString = timestamp.ToString("yyyy-MM-dd\\THH:mm:ss.ffffffK");
 
-            // Separate out the data items into those that are on one line and those
-            // need separate lines.
-            List<IDatum> together = new List<IDatum>();
-            List<IDatum> separate = new List<IDatum>();
-            // foreach (IDatum di in mDataItems)
-            // {
-            //     List<IDatum> list = di.ItemList();
-            //     if (di.NewLine)
-            //         separate.AddRange(list);
-            //     else
-            //         together.AddRange(list);
-            // }
+            StringBuilder builder = new StringBuilder();
+            builder.Append(timestampString);
 
-            // Compone all the same line data items onto one line.
-            string line;
-            if (timestamp == null)
+            // Compose all the same line data items onto one line.
+            foreach (IDatum item in _datums.Where(datum => !datum.SeparateLine && datum.HasChanged))
             {
-                DateTime now = DateTime.UtcNow;
-                timestamp = now.ToString("yyyy-MM-dd\\THH:mm:ss.fffffffK");
-            }
-            if (together.Count > 0)
-            {
-                line = timestamp;
-                foreach (IDatum di in together)
-                    line += "|" + di.ToString();
-                line += "\n";
-
-                SendToAll(line);
+                item.AddToUpdate(builder);
             }
 
-            // Now write out all the separate lines
-            if (separate.Count > 0)
+            builder.AppendLine();
+            
+            foreach (IDatum item in _datums.Where(datum => datum.SeparateLine && datum.HasChanged))
             {
-                foreach (IDatum di in separate)
-                {
-                    line = timestamp;
-                    line += "|" + di.ToString() + "\n";
-                    SendToAll(line);
-                }
+                item.AddToUpdate(builder);
             }
 
             // Flush the output

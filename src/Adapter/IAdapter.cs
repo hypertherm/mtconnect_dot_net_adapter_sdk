@@ -1,5 +1,6 @@
 using MTConnect.Assets;
 using MTConnect.DataElements;
+using System;
 using System.IO;
 
 namespace MTConnect.Adapter
@@ -69,7 +70,12 @@ namespace MTConnect.Adapter
         /// Send all data to the clients.
         /// </summary>
         /// <param name="timestamp">When to mark the timestamp of the update</param>
-        void SendChanged(string timestamp = null);
+        void SendChanged(DateTime timestamp);
+
+        /// <summary>
+        /// Send all data to the clients using the current timestamp
+        /// </summary>
+        void SendChanged();
 
         /// <summary>
         /// Send a command to the Agent
