@@ -25,6 +25,9 @@ namespace MTConnect.DataElements.Events
     /// </summary>
     public class Event<T> : IDatum<T> where T : IConvertible
     {
+        /// <value>Value set fot</value>
+        public static string UNAVAILABLE_STATE = "UNAVAILABLE";
+
         /// <inheritdoc/>
         public string Device { get; }
 
@@ -33,6 +36,11 @@ namespace MTConnect.DataElements.Events
 
         /// <inheritdoc/>
         public T Value { get; protected set;}
+
+        private T _lastValue;
+
+        public bool HasChanged { get; private set; }
+
         /// <inheritdoc/>
         object IDatum.Value => (object) Value;
 
@@ -54,11 +62,13 @@ namespace MTConnect.DataElements.Events
         {
             Device = deviceName;
             Name = datumName;
+            HasChanged = true;
             SetUnavailable();
         }
 
         /// <inheritdoc/>
         public bool Available { get; protected set; }
+
         /// <inheritdoc/>
         public void SetUnavailable()
         {
@@ -70,9 +80,9 @@ namespace MTConnect.DataElements.Events
         {
             StringBuilder builder = new StringBuilder();
             builder.Append($"{(Device == null ? "" : $"{Device}:")}{Name}|");
-            if (Value == null || Value.Equals(default(T)))
+            if (!Available)
             {
-                builder.Append("UNAVAILABLE");
+                builder.Append(UNAVAILABLE_STATE);
             }
             else
             {
@@ -92,7 +102,19 @@ namespace MTConnect.DataElements.Events
         /// <inheritdoc/>
         public void AddToUpdate(StringBuilder builder)
         {
-            builder.Append(ToString());
+            // Only add to update if changed
+            if (HasChanged)
+            {
+                // Update the last value sent
+                _lastValue = Value;
+                // Append the pipe separator
+                builder.Append("|");
+
+                // Add the {devicename}:{eventname}|{value}
+                builder.Append(ToString());
+
+                HasChanged = false;
+            }
         }
 
         /// <inheritdoc/>
@@ -107,6 +129,10 @@ namespace MTConnect.DataElements.Events
                 Available = true;
                 Value = value;
             }
+
+            // If the value has EVER changed since the last call to AddToUpdate()
+            // then we should mark this changed and resend the data (indicating the value has changed) 
+            HasChanged = HasChanged || !_lastValue.Equals(Value);
         }
 
         /// <inheritdoc/>
@@ -114,7 +140,7 @@ namespace MTConnect.DataElements.Events
         {
             if (value == null)
             {
-                SetUnavailable();
+                Set(default(T));
             }
             else
             {

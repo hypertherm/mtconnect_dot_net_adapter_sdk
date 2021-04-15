@@ -16,7 +16,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using FluentAssertions;
+using Moq;
 using MTConnect.DataElements.Events;
 using Xunit;
 
@@ -176,6 +178,35 @@ namespace MTConnect.utests.DataElements.Events
             uut.SetUnavailable();
             uut.Available.Should().BeFalse();
             uut.Value.Should().Be(default(int));
+        }
+
+        [Fact]
+        public void HasChangedOnCreation()
+        {
+            Event<int> uut = new Event<int>("a");
+            uut.HasChanged.Should().BeTrue();
+        }
+
+        [Fact]
+        public void AddToUpdateNoWriteOnNoChange()
+        {
+            Event<int> uut = new Event<int>("a");
+            StringBuilder stringBuilder = new StringBuilder();
+            uut.Set(1);
+            uut.AddToUpdate(stringBuilder);
+            stringBuilder.ToString().Should().Be("|a|1");
+            stringBuilder.Clear();
+            uut.AddToUpdate(stringBuilder);
+            stringBuilder.ToString().Should().Be("");
+        }
+
+        [Fact]
+        public void AddToUpdateModifiesHasChanged()
+        {
+            Event<int> uut = new Event<int>("a");
+            uut.HasChanged.Should().BeTrue();
+            uut.AddToUpdate(new StringBuilder());
+            uut.HasChanged.Should().BeFalse();
         }
     }
 }
