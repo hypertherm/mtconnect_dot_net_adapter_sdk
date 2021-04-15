@@ -38,11 +38,13 @@ jobs:
         useConfigFile: true
 
     - name: Print GitVersion computed
-      id: print_version_info
+      id: artifactoryversion
       run: |
         echo "LegacySemVer: ${{ steps.gitversion.outputs.legacySemVer }}"
         echo "AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
-        
+        echo "MajorMinorPrerelease": ${{steps.gitversion.outputs.Major}}${{steps.gitversion.outputs.Minor}}${{steps.gitversion.outputs.PreReleaseNumber}}"
+        echo "::set-output name=nuGetVersion::${{steps.gitversion.outputs.Major}}${{steps.gitversion.outputs.Minor}}${{steps.gitversion.outputs.PreReleaseNumber}}"
+
       env:
         NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
@@ -52,7 +54,7 @@ jobs:
 
     - name: Build
       id: dotnet_build
-      run: dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore -p:Version="${{ steps.gitversion.outputs.assemblySemVer }}"
+      run: dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore -p:Version="${{ steps.artifactoryversion.outputs.nuGetVersion }}"
 
     - name: Test
       id: unit_test
@@ -60,7 +62,7 @@ jobs:
 
     - name: Create package
       id: nuget_pack
-      run: dotnet pack --configuration ${{ env.BUILD_CONFIGURATION }} -o ${{ env.NUGET_PACK_PATH }} --no-restore --no-build -p:Version=${{ steps.gitversion.outputs.nuGetVersion }}
+      run: dotnet pack --configuration ${{ env.BUILD_CONFIGURATION }} -o ${{ env.NUGET_PACK_PATH }} --no-restore --no-build -p:Version=${{ steps.artifactoryversion.outputs.nuGetVersion }}
 
     - name: Archive NuGets artifacts
       id: archive_nugets
