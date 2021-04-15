@@ -48,9 +48,6 @@ jobs:
 
         echo "::set-output name=nuGetVersion::"${{ env.VERSION }}
 
-      env:
-        NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
-
     - name: Install dependencies
       id: restore_dependencies
       run: dotnet restore
