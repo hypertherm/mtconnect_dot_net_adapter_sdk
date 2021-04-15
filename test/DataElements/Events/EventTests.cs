@@ -175,9 +175,11 @@ namespace MTConnect.utests.DataElements.Events
             uut.Set(3);
             uut.Value.Should().Be(3);
             uut.Available.Should().BeTrue();
+            uut.AddToUpdate(new StringBuilder());
             uut.SetUnavailable();
             uut.Available.Should().BeFalse();
             uut.Value.Should().Be(default(int));
+            uut.HasChanged.Should().BeTrue();
         }
 
         [Fact]
