@@ -17,27 +17,210 @@
 // using NUnit.Framework;
 // using System.Collections.Generic;
 
+using System;
+using System.Collections.Generic;
+using System.Text;
 using FluentAssertions;
+using Moq;
 using MTConnect.DataElements.Conditions;
+using MTConnect.Utilities.Time;
 using Xunit;
 
 namespace MTConnect.utests.DataElements.Conditions
 {
     public class SimpleConditionTests
     {
+        private SimpleCondition uut;
+        private Mock<ITimeProvider> _mockTimeProvider;
+
+        public SimpleConditionTests()
+        {
+            _mockTimeProvider = new Mock<ITimeProvider>();
+            uut = new SimpleCondition("device", "condition", _mockTimeProvider.Object);
+        }
+
         [Fact]
         public void NotAvaialbeOnCreation()
         {
-            SimpleCondition uut = new SimpleCondition("eventName");
             uut.Available.Should().BeFalse();
         }
         
         [Fact]
         public void SetNormal()
         {
-            SimpleCondition uut = new SimpleCondition("eventName");
+            _mockTimeProvider
+                .Setup(tp => tp.Now)
+                .Returns(new DateTime(1,2,3,4,5,6, DateTimeKind.Utc));
             uut.SetNormal();
             uut.Available.Should().BeTrue();
+            uut.Value.Should().BeEquivalentTo(new HashSet<ConditionValue> { ConditionValue.NormalConditionValue(_mockTimeProvider.Object.Now, "device", "condition") });
+        }
+
+        [Fact]
+        public void RemoveByNativeCode()
+        {
+            uut.AddCondition(
+                new ConditionValue
+                {
+                    Timestamp = new DateTime(1, 2, 3, 4, 5, 6, DateTimeKind.Utc),
+                    DeviceName = "device",
+                    ConditionName = "condition",
+                    NativeCode = "native code",
+                    NativeSeverity = "native severity",
+                    Level = ConditionLevel.Normal,
+                    Qualifier = ConditionQualifier.None,
+                    Message = "message"
+                }
+            );
+            uut.HasChanged.Should().BeTrue();
+
+            uut.AddToUpdate(new StringBuilder());
+
+            uut.HasChanged.Should().BeFalse();
+
+            uut
+                .Value
+                .Should()
+                .BeEquivalentTo(
+                    new HashSet<ConditionValue> 
+                    {
+                        new ConditionValue
+                        {
+                            Timestamp = new DateTime(1, 2, 3, 4, 5, 6, DateTimeKind.Utc),
+                            DeviceName = "device",
+                            ConditionName = "condition",
+                            NativeCode = "native code",
+                            NativeSeverity = "native severity",
+                            Level = ConditionLevel.Normal,
+                            Qualifier = ConditionQualifier.None,
+                            Message = "message"
+                        }
+                    }
+                );
+            
+            uut.RemoveCondition("native code");
+
+            uut.HasChanged.Should().BeTrue();
+
+            uut.Value.Should().BeEquivalentTo(new HashSet<ConditionValue> { ConditionValue.NormalConditionValue(_mockTimeProvider.Object.Now, "device", "condition") });
+        }
+        
+        [Fact]
+        public void RemoveByConditionValue()
+        {
+            ConditionValue value = new ConditionValue
+                {
+                    Timestamp = new DateTime(1, 2, 3, 4, 5, 6, DateTimeKind.Utc),
+                    DeviceName = "device",
+                    ConditionName = "condition",
+                    NativeCode = "native code",
+                    NativeSeverity = "native severity",
+                    Level = ConditionLevel.Normal,
+                    Qualifier = ConditionQualifier.None,
+                    Message = "message"
+                };
+
+            uut.AddCondition(value);
+
+            uut.HasChanged.Should().BeTrue();
+
+            uut.AddToUpdate(new StringBuilder());
+
+            uut.HasChanged.Should().BeFalse();
+            
+            
+            uut.RemoveCondition(value);
+
+            uut.HasChanged.Should().BeTrue();
+
+            uut.Value.Should().BeEquivalentTo(new HashSet<ConditionValue> { ConditionValue.NormalConditionValue(_mockTimeProvider.Object.Now, "device", "condition") });
+        }
+
+        [Fact]
+        public void AddToUpdate()
+        {
+            ConditionValue condition1 = new ConditionValue
+            {
+                Timestamp = new DateTime(2021, 1, 2, 3, 4, 5, DateTimeKind.Utc),
+                DeviceName = "device",
+                ConditionName = "condition",
+                NativeCode = "native code 1",
+                NativeSeverity = "native severity 1",
+                Level = ConditionLevel.Fault,
+                Qualifier = ConditionQualifier.None,
+                Message = "message 1"
+            };
+
+            ConditionValue condition2 = new ConditionValue
+            {
+                Timestamp = new DateTime(2021, 6, 7, 8, 9, 10, DateTimeKind.Utc),
+                DeviceName = "device",
+                ConditionName = "condition",
+                NativeCode = "native code 2",
+                NativeSeverity = "native severity 2",
+                Level = ConditionLevel.Warning,
+                Qualifier = ConditionQualifier.None,
+                Message = "message 2"
+            };
+
+            uut.AddCondition(condition1);
+
+            uut.AddCondition(condition2);
+
+            StringBuilder sb = new StringBuilder();
+            uut.AddToUpdate(sb);
+
+            string actual = sb.ToString();
+            actual
+                .Should()
+                .Be("2021-01-02T03:04:05.000000Z|device:condition|FAULT|native code 1|native severity 1||message 1\r\n2021-06-07T08:09:10.000000Z|device:condition|WARNING|native code 2|native severity 2||message 2\r\n");
+                //  Enum.GetName(mLevel.GetType(), mLevel) + "|" + mNativeCode + "|" + mNativeSeverity + "|" + mQualifier + "|" + mText
+        }
+
+        [Fact]
+        public void AddToUpdateNoReEmit()
+        {
+            ConditionValue condition1 = new ConditionValue
+            {
+                Timestamp = new DateTime(2021, 1, 2, 3, 4, 5, DateTimeKind.Utc),
+                DeviceName = "device",
+                ConditionName = "condition",
+                NativeCode = "native code 1",
+                NativeSeverity = "native severity 1",
+                Level = ConditionLevel.Fault,
+                Qualifier = ConditionQualifier.None,
+                Message = "message 1"
+            };
+
+            ConditionValue condition2 = new ConditionValue
+            {
+                Timestamp = new DateTime(2021, 6, 7, 8, 9, 10, DateTimeKind.Utc),
+                DeviceName = "device",
+                ConditionName = "condition",
+                NativeCode = "native code 2",
+                NativeSeverity = "native severity 2",
+                Level = ConditionLevel.Warning,
+                Qualifier = ConditionQualifier.None,
+                Message = "message 2"
+            };
+
+            uut.AddCondition(condition1);
+
+            uut.AddCondition(condition2);
+
+            StringBuilder sb = new StringBuilder();
+            uut.AddToUpdate(sb);
+
+            string actual = sb.ToString();
+            actual
+                .Should()
+                .Be("2021-01-02T03:04:05.000000Z|device:condition|FAULT|native code 1|native severity 1||message 1\r\n2021-06-07T08:09:10.000000Z|device:condition|WARNING|native code 2|native severity 2||message 2\r\n");
+            
+            // Should not have any value
+            sb.Clear();
+            uut.AddToUpdate(sb);
+            actual = sb.ToString();
+            actual.Should().BeEmpty();
         }
     }
 }

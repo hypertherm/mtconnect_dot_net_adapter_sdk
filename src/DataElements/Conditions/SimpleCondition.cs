@@ -16,7 +16,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using MTConnect.Utilities.Time;
@@ -49,7 +48,8 @@ namespace MTConnect.DataElements.Conditions
         /// <inheritdoc/>
         public bool SeparateLine => true;
 
-        public bool HasChanged => throw new NotImplementedException();
+        /// <inheritdoc />
+        public bool HasChanged { get; private set; }
 
         /// <summary>
         /// Create a new condition without a specific device name
@@ -73,39 +73,60 @@ namespace MTConnect.DataElements.Conditions
             Value = new HashSet<ConditionValue>();
             _timeProvider = timeProvider;
             SetUnavailable();
+            HasChanged = true;
         }
 
         /// <inheritdoc/>
         public void SetUnavailable()
         {
-            Available = false;
             Value.Clear();
-            Value.Add(ConditionValue.UnavailableConditionValue(_timeProvider.Now));
+            AddCondition(ConditionValue.UnavailableConditionValue(_timeProvider.Now, Device, Name));
+            Available = false;
+        }
+        
+        /// <inheritdoc/>
+        public void SetNormal()
+        {
+            Value.Clear();
+            AddCondition(ConditionValue.NormalConditionValue(_timeProvider.Now, Device, Name));
+            Available = true;
         }
 
         /// <inheritdoc/>
         public void AddCondition(ConditionValue conditionValue)
         {
-            // If the condition only contains normal or unavailable
+            // If the current condition state only contains normal or unavailable
             if(
                 Value
                     .Where(v => 
                         v.Level == ConditionLevel.Normal
                         || v.Level == ConditionLevel.Unavailable
                         )
-                    .Count() == 1
+                    .Count() > 0
             )
             {
                 Value.Clear();
             }
             Available = true;
-            Value.Add(conditionValue);
+
+            // Set the timestamp on the ConditionValue using _timeProvider iff the Timestamp has not been set
+            if(conditionValue.Timestamp == default(DateTime))
+            {
+                conditionValue.Timestamp = _timeProvider.Now;
+            }
+
+            if (!Value.Contains(conditionValue))
+            {
+                Value.Add(conditionValue);
+                HasChanged = true;
+            }
         }
 
         /// <inheritdoc/>
         public bool RemoveCondition(ConditionValue conditionValue)
         {
             bool anyRemoved = Value.Remove(conditionValue);
+            HasChanged = HasChanged || anyRemoved;
 
             // if there are no conditions remaining set to normal
             if(Value.Count() == 0)
@@ -121,7 +142,12 @@ namespace MTConnect.DataElements.Conditions
         {
             IEnumerable<ConditionValue> conditionsToRemove = Value
                 .Where(c => c.NativeCode == nativeCode);
-
+            
+            if (conditionsToRemove.Count() > 0)
+            {
+                HasChanged = true;
+            }
+            
             conditionsToRemove
                 .ToList()
                 .ForEach(r => Value.Remove(r));
@@ -131,49 +157,29 @@ namespace MTConnect.DataElements.Conditions
             {
                 SetNormal();
             }
+            
             return conditionsToRemove.Count() > 0;
-        }
-
-        /// <inheritdoc/>
-        public void SetNormal()
-        {
-            Value.Clear();
-            Value.Add(ConditionValue.NormalConditionValue(_timeProvider.Now));
-            Available = true;
         }
 
         /// <inheritdoc/>
         public void AddToUpdate(StringBuilder builder)
         {
-            builder.AppendLine(ToString());
+            if (HasChanged)
+            {
+                builder.Append(ToString());
+                HasChanged = false;
+            }
         }
 
         public override string ToString()
         {
             StringBuilder builder = new StringBuilder();
-            if (!Available)
+
+            foreach(ConditionValue conditionValue in Value)
             {
-                builder.Append(
-                    _timeProvider.Now
-                    .ToUniversalTime()
-                    .ToString("o")
-                );
-                builder.Append($"|{(Device == null ? "" : $"{Device}:")}{Name}|");
-                builder.AppendLine("UNAVAILABLE||||");
+                builder.AppendLine(conditionValue.ToString());
             }
-            else
-            {
-                foreach(ConditionValue val in Value)
-                {
-                    builder.Append(
-                        _timeProvider.Now
-                        .ToUniversalTime()
-                        .ToString("o")
-                    );
-                    builder.Append($"|{(Device == null ? "" : $"{Device}:")}{Name}|");
-                    builder.AppendLine(val.ToString());
-                }
-            }
+
             return builder.ToString();
         }
 
@@ -199,6 +205,11 @@ namespace MTConnect.DataElements.Conditions
         /// <inheritdoc/>
         public void Set(ICollection<ConditionValue> value)
         {
+            if(Value.Where(v => !value.Contains(v)).Count() > 0 || value.Where(v => !Value.Contains(v)).Count() > 0)
+            {
+                HasChanged = true;
+            }
+
             if (// if it is a null list or contains at least one unavailable then set condition unavailable
                 value == null
                 || value

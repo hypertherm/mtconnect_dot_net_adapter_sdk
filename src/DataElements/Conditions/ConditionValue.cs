@@ -6,6 +6,8 @@ namespace MTConnect.DataElements.Conditions
 {
     public class ConditionValue
     {
+        public string DeviceName { get; set; }
+        public string ConditionName { get; set; }
         public DateTime Timestamp { get; set; }
         public string NativeCode { get; set; }
         public string NativeSeverity { get; set; }
@@ -13,11 +15,13 @@ namespace MTConnect.DataElements.Conditions
         public ConditionQualifier Qualifier { get; set; }
         public string Message { get; set; }
 
-        public static ConditionValue UnavailableConditionValue(DateTime timestamp)
+        public static ConditionValue UnavailableConditionValue(DateTime timestamp, string deviceName, string conditionName)
         {
             return new ConditionValue
             {
-                Timestamp = timestamp,
+                Timestamp = timestamp.ToUniversalTime(),
+                DeviceName = deviceName,
+                ConditionName = conditionName,
                 NativeCode = null,
                 NativeSeverity = null,
                 Level = ConditionLevel.Unavailable,
@@ -26,11 +30,13 @@ namespace MTConnect.DataElements.Conditions
             };
         }
 
-        public static ConditionValue NormalConditionValue(DateTime timestamp)
+        public static ConditionValue NormalConditionValue(DateTime timestamp, string deviceName, string conditionName)
         {
             return new ConditionValue
             {
-                Timestamp = timestamp,
+                Timestamp = timestamp.ToUniversalTime(),
+                DeviceName = deviceName,
+                ConditionName = conditionName,
                 NativeCode = null,
                 NativeSeverity = null,
                 Level = ConditionLevel.Normal,
@@ -60,7 +66,9 @@ namespace MTConnect.DataElements.Conditions
         /// </summary>
         public ConditionValue()
         {
-            Timestamp = DateTime.MinValue;
+            Timestamp = default(DateTime);
+            DeviceName = null;
+            ConditionName = null;
             NativeCode = null;
             NativeSeverity = null;
             Level = ConditionLevel.Unavailable;
@@ -72,9 +80,11 @@ namespace MTConnect.DataElements.Conditions
         {
             string levelString = "";
             _levelFormatDictionary.TryGetValue(Level, out levelString);
+
             string qualifierString = "";
             _qualifierFormatDictionary.TryGetValue(Qualifier, out qualifierString);
-            return $"{levelString}|{(NativeCode == null ? "" : NativeCode)}|{(NativeSeverity == null ? "" : NativeSeverity)}|{qualifierString}|{(Message == null ? "" : Message)}";
+
+            return $"{Timestamp.ToUniversalTime().ToString("yyyy-MM-dd\\THH:mm:ss.ffffffK")}|{(DeviceName == null ? "" : $"{DeviceName}:")}{ConditionName}|{levelString}|{(NativeCode == null ? "" : NativeCode)}|{(NativeSeverity == null ? "" : NativeSeverity)}|{qualifierString}|{(Message == null ? "" : Message)}";
         }
 
         public static bool operator ==(ConditionValue lhs, ConditionValue rhs)
@@ -129,8 +139,10 @@ namespace MTConnect.DataElements.Conditions
             // Return true if the fields match.
             // Note that the base class is not invoked because it is
             // System.Object, which defines Equals as reference equality.
-            return NativeCode == conditionValue.NativeCode
-                && Timestamp == conditionValue.Timestamp
+            return Timestamp == conditionValue.Timestamp
+                && DeviceName == conditionValue.DeviceName
+                && ConditionName == conditionValue.ConditionName
+                && NativeCode == conditionValue.NativeCode
                 && Level == conditionValue.Level
                 && NativeSeverity == conditionValue.NativeSeverity
                 && Qualifier == conditionValue.Qualifier
@@ -141,6 +153,8 @@ namespace MTConnect.DataElements.Conditions
         {
             int i = Level.GetHashCode();
             i += Timestamp.GetHashCode();
+            i += DeviceName.GetHashCode();
+            i += ConditionName.GetHashCode();
             i += NativeCode == null ? -23423 : NativeCode.GetHashCode();
             i += NativeSeverity == null ? -4421 : NativeSeverity.GetHashCode();
             i += Qualifier.GetHashCode();
