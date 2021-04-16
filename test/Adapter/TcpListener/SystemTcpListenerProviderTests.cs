@@ -1,19 +1,17 @@
 ﻿using FluentAssertions;
 using MTConnect.Adapter.Providers.TcpClient;
 using MTConnect.Adapter.Providers.TcpListener;
-using NUnit.Framework;
 using System;
 using System.Net;
 using System.Net.Http;
-using System.Net.Sockets;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace MTConnect.utests.Adapter.TcpListener
 {
-    [TestFixture]
     public class SystemTcpListenerProviderTests
     {
-        [Test]
+        [Fact]
         public void AcceptClientTcpClientResolves()
         {
             var uut = new SystemTcpListenerProvider(IPAddress.Any, 5534);

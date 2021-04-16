@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright Copyright 2012, System Insights, Inc.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,427 +13,582 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-using MTConnect.Adapter;
+using FluentAssertions;
 using Moq;
+using MTConnect.Adapter;
 using MTConnect.Adapter.Providers.TcpClient;
 using MTConnect.Adapter.Providers.TcpListener;
-using NUnit.Framework;
+using MTConnect.DataElements;
+using MTConnect.Utilities.Time;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using MTConnect.DataElements;
-using MTConnect.Assets;
-using System;
-using FluentAssertions;
-using System.Xml;
+using System.Threading.Tasks;
+using Xunit;
 
 namespace MTConnect.utests.Adapter
 {
-    [TestFixture]
-    public class MTConnectAdapterTests : MTConnectAdapter
+    public class MTConnectAdapterTests
     {
-        ASCIIEncoding encoder = new ASCIIEncoding();
-        Stream stream;
-
-        private Mock<TcpClientProvider> _mockTcpClientProvider;
-        private Mock<TcpListenerProvider> _mockTcpListenerProvider;
-
-        public MTConnectAdapterTests() : base()
+        private MTConnectAdapter uut;
+        private Mock<TcpClientProvider> _mockTcpClient;
+        private Mock<ITimeProvider> _mockTimeProvider;
+        private Mock<TcpListenerProvider> _mockTcpListener;
+        private  Mock<TcpClientProvider> _mockTcpClientProvider;
+        private Mock<Stream> _mockTcpOutputStream;
+        public MTConnectAdapterTests()
         {
-            _mockTcpListenerProvider = new Mock<TcpListenerProvider>();
+            _mockTcpListener = new Mock<TcpListenerProvider>();
+            _mockTcpClient = new Mock<TcpClientProvider>();
+            _mockTcpClient
+                .Setup(c => c.Client)
+                .Returns(new Socket(SocketType.Stream, ProtocolType.Tcp));
+            _mockTcpClient
+                .Setup(c => c.GetStream())
+                .Returns(new MemoryStream());
+            _mockTcpListener
+                .Setup(p => p.LocalEndpoint)
+                .Returns(new IPEndPoint(IPAddress.Any, 12367));
+            _mockTcpListener
+                .Setup(p => p.AcceptTcpClient())
+                .Returns(_mockTcpClient.Object);
+
+            _mockTcpOutputStream = new Mock<Stream>();
+            _mockTimeProvider = new Mock<ITimeProvider>();
             _mockTcpClientProvider = new Mock<TcpClientProvider>();
-            _mockTcpClientProvider.Setup(c => c.Client).Returns(new Socket(SocketType.Stream, ProtocolType.Tcp));
-            _mockTcpClientProvider.Setup(c => c.GetStream()).Returns(new MemoryStream());
-            _mockTcpListenerProvider.Setup(p => p.LocalEndpoint).Returns(new IPEndPoint(IPAddress.Any, 12367));
-            _mockTcpListenerProvider.Setup(p => p.AcceptTcpClient()).Returns(_mockTcpClientProvider.Object);
-
-            _tcpListener = _mockTcpListenerProvider.Object;
-
-            Heartbeat = 1;
-        }
-
-        private MTConnectAdapter adapter;
-
-        [SetUp]
-        public void initialize()
-        {
-            stream = new MemoryStream(2048);
-            adapter = new MTConnectAdapterTests();
-            adapter.Start();
-            while (!adapter.Running) Thread.Sleep(10);
-        }
-
-        [TearDown]
-        public void cleanup()
-        {
-            adapter.Stop();
-        }
-
-        [Test]
-        public void should_have_a_non_zero_port()
-        {
-            Assert.AreNotEqual(0, adapter.ServerPort);
-        }
-
-        [Test]
-        public void should_receive_initial_data_when_connected()
-        {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
-
-            adapter.addClientStream(stream);
-            stream.Seek(0, SeekOrigin.Begin);
             
-            byte[] buffer = new byte[1024];
-            int count = stream.Read(buffer, 0, 1024);
-
-            string line = encoder.GetString(buffer, 0, count);
-            Assert.IsTrue(line.EndsWith("avail|AVAILABLE\n"));
-        }
-
-        [Test]
-        public void should_receive_updates_when_data_item_changes()
-        {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
-            adapter.SendChanged();
-
-            adapter.addClientStream(stream);
-            long pos = stream.Position;
-
-            avail.Value = "AVAILABLE";
-            adapter.SendChanged();
-
-            avail.Value = "UNAVAILABLE";
-            adapter.SendChanged();
-
-            byte[] buffer = new byte[1024];
-            stream.Seek(pos, SeekOrigin.Begin);
-            int count = stream.Read(buffer, 0, 1024);
-            string line = encoder.GetString(buffer, 0, count);
-
-            Assert.IsTrue(line.EndsWith("avail|UNAVAILABLE\n"));
-        }
-
-        [Test]
-        public void should_combine_multiple_data_items_on_one_line()
-        {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
-
-            Event estop = new Event("estop");
-            adapter.AddDataItem(estop);
-            estop.Value = "ARMED";
-            adapter.SendChanged();
-
-            adapter.addClientStream(stream);
-            stream.Seek(0, SeekOrigin.Begin);
-
-            byte[] buffer = new byte[1024];
-            int count = stream.Read(buffer, 0, 1024);
-
-            string line = encoder.GetString(buffer, 0, count);
-            Assert.IsTrue(line.EndsWith("avail|AVAILABLE|estop|ARMED\n"));
-        }
-
-        [Test]
-        public void should_put_messages_on_separate_lines()
-        {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
-
-            Message msg = new Message("message");
-            adapter.AddDataItem(msg);
-            msg.Value = "Message";
-            msg.Code = "123";
-            adapter.SendChanged();
-
-            adapter.addClientStream(stream);
-
-            stream.Seek(0, SeekOrigin.Begin);
-            byte[] buffer = new byte[1024];
-            int count = stream.Read(buffer, 0, 1024);
-
-            string s = encoder.GetString(buffer, 0, count);
-            string[] lines = s.Split('\n');
-            Assert.AreEqual(3, lines.Length);
-            Assert.IsTrue(lines[0].EndsWith("avail|AVAILABLE"));
-            Assert.IsTrue(lines[1].EndsWith("message|123|Message"));
-            Assert.AreEqual(0, lines[2].Length);
-        }
-
-        [Test]
-        public void should_send_condition_on_fault()
-        {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
-
-            Condition cond = new Condition("cond");
-            cond.Normal();
-            adapter.AddDataItem(cond);
-            adapter.SendChanged();
-
-            adapter.addClientStream(stream);
-            long pos = stream.Position;
-
-            adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
-            adapter.SendChanged();
-
-            stream.Seek(pos, SeekOrigin.Begin);
-            byte[] buffer = new byte[1024];
-            int count = stream.Read(buffer, 0, 1024);
-            string line = encoder.GetString(buffer, 0, count);
-            Assert.IsTrue(line.EndsWith("cond|FAULT|111|||A Fault\n"));
-        }
-
-        [Test]
-        public void should_send_normal_when_fault_is_not_reasserted()
-        {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
-
-            Condition cond = new Condition("cond");
-            cond.Normal();
-            adapter.AddDataItem(cond);
-            adapter.SendChanged();
-
-            adapter.addClientStream(stream);
-
-            adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
-            adapter.SendChanged();
-            long pos = stream.Position;
-
-            adapter.Begin();
-            adapter.SendChanged();
-
-            stream.Seek(pos, SeekOrigin.Begin);
-            byte[] buffer = new byte[1024];
-            int count = stream.Read(buffer, 0, 1024);
-            string line = encoder.GetString(buffer, 0, count);
-            Assert.IsTrue(line.EndsWith("cond|NORMAL||||\n"));
-        }
-
-        [Test]
-        public void should_send_normal_for_single_fault_when_more_than_one_are_active()
-        {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
-
-            Condition cond = new Condition("cond");
-            cond.Normal();
-            adapter.AddDataItem(cond);
-            adapter.SendChanged();
-
-            adapter.addClientStream(stream);
-
-            adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
-            cond.Add(Condition.Level.FAULT, "Another Fault", "112");
-            adapter.SendChanged();
-            long pos = stream.Position;
-
-            adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "Another Fault", "112");
-            adapter.SendChanged();
-
-            stream.Seek(pos, SeekOrigin.Begin);
-            byte[] buffer = new byte[1024];
-            int count = stream.Read(buffer, 0, 1024);
-            string line = encoder.GetString(buffer, 0, count);
-            Assert.IsTrue(line.EndsWith("cond|NORMAL|111|||\n"));
-        }
-
-        [Test]
-        public void should_send_normal_when_last_active_condition_is_cleared()
-        {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
-
-            Condition cond = new Condition("cond");
-            cond.Normal();
-            adapter.AddDataItem(cond);
-            adapter.SendChanged();
-
-            adapter.addClientStream(stream);
-
-            adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
-            cond.Add(Condition.Level.FAULT, "Another Fault", "112");
-            adapter.SendChanged();
-
-            adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "Another Fault", "112");
-            adapter.SendChanged();
-            long pos = stream.Position;
-
-            adapter.Begin();
-            adapter.SendChanged();
+            _mockTcpListener
+                .Setup(tl => tl.AcceptTcpClient())
+                .Returns(_mockTcpClientProvider.Object);
             
-            stream.Seek(pos, SeekOrigin.Begin);
-            byte[] buffer = new byte[1024];
-            int count = stream.Read(buffer, 0, 1024);
-            string line = encoder.GetString(buffer, 0, count);
-            Assert.IsTrue(line.EndsWith("cond|NORMAL||||\n"));
+            _mockTcpClientProvider
+                .Setup(tc => tc.GetStream())
+                .Returns(_mockTcpOutputStream.Object);
+
+            uut = new MTConnectAdapter(_mockTcpListener.Object, _mockTimeProvider.Object, false);
         }
 
-        [Test]
-        public void should_not_clear_a_simple_condition()
+        [Theory]
+        [InlineData(DeviceCommand.Manufacturer, "a", "manufacturer")]
+        [InlineData(DeviceCommand.Station, "a", "station")]
+        [InlineData(DeviceCommand.SerialNumber, "a", "serialNumber")]
+        [InlineData(DeviceCommand.Description, "a", "description")]
+        [InlineData(DeviceCommand.NativeName, "a", "nativeName")]
+        [InlineData(DeviceCommand.Calibration, "a", "calibration")]
+        [InlineData(DeviceCommand.ConversionRequired, "a", "conversionRequired")]
+        [InlineData(DeviceCommand.RelativeTime, "a", "relativeTime")]
+        [InlineData(DeviceCommand.RealTime, "a", "realTime")]
+        [InlineData(DeviceCommand.Device, "a", "device")]
+        [InlineData(DeviceCommand.UUID, "a", "uuid")]
+        public void CommandIssuedOnAddClient(DeviceCommand command, string value, string expectedCommandName)
         {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
+            uut.SendCommand(command, value);
 
-            Condition cond = new Condition("cond", true);
-            cond.Normal();
-            adapter.AddDataItem(cond);
-            adapter.SendChanged();
+            _mockTcpOutputStream
+                .Setup(tos => tos.Write(It.IsAny<byte[]>(), 0, It.IsAny<int>()))
+                .Callback<byte[], int, int>((bytemsg, start, length) =>
+                {
+                    string actual = Encoding.ASCII.GetString(bytemsg, 0, length);
+                        
+                    actual
+                        .Should()
+                        .Be($"* {expectedCommandName}: {value}\n");
+                    uut.Stop();
+                });
 
-            adapter.addClientStream(stream);
-
-            adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
-            adapter.SendChanged();
-            long pos = stream.Position;
-
-            adapter.Begin();
-            adapter.SendChanged();
-
-            Assert.AreEqual(pos, stream.Position);
+            uut.Start();
         }
 
-        [Test]
-        public void should_manually_clear_condition()
+        [Fact]
+        public void  SendChangedMessageGeneration()
         {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
+            Mock<IDatum> mockDatum1 = new Mock<IDatum>();
+            Mock<IDatum> mockDatum2 = new Mock<IDatum>();
+            Mock<IDatum> mockDatum3 = new Mock<IDatum>();
+            Mock<IDatum> mockDatum4 = new Mock<IDatum>();
 
-            Condition cond = new Condition("cond", true);
-            cond.Normal();
-            adapter.AddDataItem(cond);
-            adapter.SendChanged();
+            _mockTimeProvider
+                .Setup(t => t.Now)
+                .Returns(new DateTime(2021, 1, 2, 4, 5, 6, DateTimeKind.Utc));
 
-            adapter.addClientStream(stream);
+            mockDatum1
+                .Setup(m => m.SeparateLine)
+                .Returns(false);
+            mockDatum1
+                .Setup(m => m.HasChanged)
+                .Returns(true);
+            mockDatum2
+                .Setup(m => m.SeparateLine)
+                .Returns(false);
+            mockDatum2
+                .Setup(m => m.HasChanged)
+                .Returns(false);
+            mockDatum3
+                .Setup(m => m.SeparateLine)
+                .Returns(true);
+            mockDatum3
+                .Setup(m => m.HasChanged)
+                .Returns(true);
+            mockDatum4
+                .Setup(m => m.SeparateLine)
+                .Returns(true);
+            mockDatum4
+                .Setup(m => m.HasChanged)
+                .Returns(false);
 
-            adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
-            adapter.SendChanged();
-            long pos = stream.Position;
-
-            adapter.Begin();
-            cond.Clear("111");
-            adapter.SendChanged();
-
-            stream.Seek(pos, SeekOrigin.Begin);
-            byte[] buffer = new byte[1024];
-            int count = stream.Read(buffer, 0, 1024);
-            string line = encoder.GetString(buffer, 0, count);
-            Assert.IsTrue(line.EndsWith("cond|NORMAL||||\n"));
-        }
-
-        [Test]
-        public void shoud_manually_clear_one_condition_when_multiple_are_present()
-        {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
-
-            Condition cond = new Condition("cond", true);
-            cond.Normal();
-            adapter.AddDataItem(cond);
-            adapter.SendChanged();
-
-            adapter.addClientStream(stream);
-
-            adapter.Begin();
-            cond.Add(Condition.Level.FAULT, "A Fault", "111");
-            cond.Add(Condition.Level.FAULT, "Another Fault", "112");
-            adapter.SendChanged();
-            long pos = stream.Position;
-
-            adapter.Begin();
-            cond.Clear("111");
-            adapter.SendChanged();
-
-            stream.Seek(pos, SeekOrigin.Begin);
-            byte[] buffer = new byte[1024];
-            int count = stream.Read(buffer, 0, 1024);
-            string line = encoder.GetString(buffer, 0, count);
-            Assert.IsTrue(line.EndsWith("cond|NORMAL|111|||\n"));
-        }
-
-        [Test]
-        public void remove_asset()
-        {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
-            adapter.SendChanged();
+            StringBuilder builder = new StringBuilder();
+            mockDatum1
+                .Setup(m => m.AddToUpdate(It.IsAny<StringBuilder>()))
+                .Callback<StringBuilder>( b =>
+                    {
+                        b.Append("|a|1");
+                        builder = b;
+                    }
+                );
+            mockDatum2
+                .Setup(m => m.AddToUpdate(It.IsAny<StringBuilder>()))
+                .Callback<StringBuilder>( b =>
+                    {
+                        b.Append("|b|2");
+                        builder = b;
+                    }
+                );
+            mockDatum3
+                .Setup(m => m.AddToUpdate(It.IsAny<StringBuilder>()))
+                .Callback<StringBuilder>( b =>
+                    {
+                        b.AppendLine("2021-01-02T04:05:06.000000Z|c|3");
+                        builder = b;
+                    }
+                );
+            mockDatum4
+                .Setup(m => m.AddToUpdate(It.IsAny<StringBuilder>()))
+                .Callback<StringBuilder>( b =>
+                    {
+                        b.AppendLine("2021-01-02T04:05:06.000000Z|d|4");
+                        builder = b;
+                    }
+                );
             
-            Mock<IAsset> mockAsset = new Mock<IAsset>();
-            mockAsset
-                .Setup(a => a.AssetId)
-                .Returns("324");
+            uut.AddDataItem(mockDatum1.Object);
+            uut.AddDataItem(mockDatum2.Object);
+            uut.AddDataItem(mockDatum3.Object);
+            uut.AddDataItem(mockDatum4.Object);
 
-            long pos = stream.Position;
-            adapter.addClientStream(stream);
-            adapter.RemoveAsset(mockAsset.Object);
+            uut.SendChanged();
 
-            stream.Seek(pos, SeekOrigin.Begin);
-            byte[] buffer = new byte[1024];
-            int count = stream.Read(buffer, 0, 1024);
-            string line = encoder.GetString(buffer, 0, count);
-            Console.WriteLine(line);
-            line.Should().EndWith("|@REMOVE_ASSET@|324\n");
-        }
-
-        [Test]
-        public void add_asset()
-        {
-            Event avail = new Event("avail");
-            adapter.AddDataItem(avail);
-            avail.Value = "AVAILABLE";
-            adapter.SendChanged();
-            
-            Mock<IAsset> mockAsset = new Mock<IAsset>();
-            mockAsset
-                .Setup(a => a.AssetId)
-                .Returns("324");
-            mockAsset
-                .Setup(a => a.AssetType)
-                .Returns("test_asset");
-            
-            XmlWriter modifiedWriter = new XmlTextWriter(new MemoryStream(), Encoding.UTF8);
-
-            mockAsset
-                .Setup(a => a.ToXml(It.IsAny<XmlWriter>()))
-                .Callback<XmlWriter>(w => {
-                    modifiedWriter = w;
-                    modifiedWriter.WriteElementString("hi", "there");
-                })
-                .Returns(modifiedWriter);
-
-            long pos = stream.Position;
-            adapter.addClientStream(stream);
-            adapter.AddAsset(mockAsset.Object);
-
-            stream.Seek(pos, SeekOrigin.Begin);
-            byte[] buffer = new byte[1024];
-            int count = stream.Read(buffer, 0, 1024);
-            string line = encoder.GetString(buffer, 0, count);
-            line.Should().EndWith("|@ASSET@|324|test_asset|--multiline--ABCD\n<hi>there</hi>\n--multiline--ABCD\n");
+            string actual = builder.ToString();
+            actual
+                .Should()
+                .Be("2021-01-02T04:05:06.000000Z|a|1\r\n2021-01-02T04:05:06.000000Z|c|3\r\n");
         }
     }
 }
+//     [TestFixture]
+//     public class MTConnectAdapterTests : MTConnectAdapter
+//     {
+//         ASCIIEncoding encoder = new ASCIIEncoding();
+//         Stream stream;
+
+//         private Mock<TcpClientProvider> _mockTcpClientProvider;
+//         private Mock<TcpListenerProvider> _mockTcpListenerProvider;
+
+//         public MTConnectAdapterTests() : base()
+//         {
+//             _mockTcpListenerProvider = new Mock<TcpListenerProvider>();
+//             _mockTcpClientProvider = new Mock<TcpClientProvider>();
+//             _mockTcpClientProvider.Setup(c => c.Client).Returns(new Socket(SocketType.Stream, ProtocolType.Tcp));
+//             _mockTcpClientProvider.Setup(c => c.GetStream()).Returns(new MemoryStream());
+//             _mockTcpListenerProvider.Setup(p => p.LocalEndpoint).Returns(new IPEndPoint(IPAddress.Any, 12367));
+//             _mockTcpListenerProvider.Setup(p => p.AcceptTcpClient()).Returns(_mockTcpClientProvider.Object);
+
+//             _tcpListener = _mockTcpListenerProvider.Object;
+
+//             Heartbeat = 1;
+//         }
+
+//         private MTConnectAdapter adapter;
+
+//         [SetUp]
+//         public void initialize()
+//         {
+//             stream = new MemoryStream(2048);
+//             adapter = new MTConnectAdapterTests();
+//             adapter.Start();
+//             while (!adapter.Running) Thread.Sleep(10);
+//         }
+
+//         [TearDown]
+//         public void cleanup()
+//         {
+//             adapter.Stop();
+//         }
+
+//         [Test]
+//         public void should_have_a_non_zero_port()
+//         {
+//             Assert.AreNotEqual(0, adapter.ServerPort);
+//         }
+
+//         [Test]
+//         public void should_receive_initial_data_when_connected()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+
+//             adapter.addClientStream(stream);
+//             stream.Seek(0, SeekOrigin.Begin);
+            
+//             byte[] buffer = new byte[1024];
+//             int count = stream.Read(buffer, 0, 1024);
+
+//             string line = encoder.GetString(buffer, 0, count);
+//             Assert.IsTrue(line.EndsWith("avail|AVAILABLE\n"));
+//         }
+
+//         [Test]
+//         public void should_receive_updates_when_data_item_changes()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+//             adapter.SendChanged();
+
+//             adapter.addClientStream(stream);
+//             long pos = stream.Position;
+
+//             avail.Value = "AVAILABLE";
+//             adapter.SendChanged();
+
+//             avail.Value = "UNAVAILABLE";
+//             adapter.SendChanged();
+
+//             byte[] buffer = new byte[1024];
+//             stream.Seek(pos, SeekOrigin.Begin);
+//             int count = stream.Read(buffer, 0, 1024);
+//             string line = encoder.GetString(buffer, 0, count);
+
+//             Assert.IsTrue(line.EndsWith("avail|UNAVAILABLE\n"));
+//         }
+
+//         [Test]
+//         public void should_combine_multiple_data_items_on_one_line()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+
+//             Event estop = new Event("estop");
+//             adapter.AddDataItem(estop);
+//             estop.Value = "ARMED";
+//             adapter.SendChanged();
+
+//             adapter.addClientStream(stream);
+//             stream.Seek(0, SeekOrigin.Begin);
+
+//             byte[] buffer = new byte[1024];
+//             int count = stream.Read(buffer, 0, 1024);
+
+//             string line = encoder.GetString(buffer, 0, count);
+//             Assert.IsTrue(line.EndsWith("avail|AVAILABLE|estop|ARMED\n"));
+//         }
+
+//         [Test]
+//         public void should_put_messages_on_separate_lines()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+
+//             Message msg = new Message("message");
+//             adapter.AddDataItem(msg);
+//             msg.Value = "Message";
+//             msg.Code = "123";
+//             adapter.SendChanged();
+
+//             adapter.addClientStream(stream);
+
+//             stream.Seek(0, SeekOrigin.Begin);
+//             byte[] buffer = new byte[1024];
+//             int count = stream.Read(buffer, 0, 1024);
+
+//             string s = encoder.GetString(buffer, 0, count);
+//             string[] lines = s.Split('\n');
+//             Assert.AreEqual(3, lines.Length);
+//             Assert.IsTrue(lines[0].EndsWith("avail|AVAILABLE"));
+//             Assert.IsTrue(lines[1].EndsWith("message|123|Message"));
+//             Assert.AreEqual(0, lines[2].Length);
+//         }
+
+//         [Test]
+//         public void should_send_condition_on_fault()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+
+//             Condition cond = new Condition("cond");
+//             cond.Normal();
+//             adapter.AddDataItem(cond);
+//             adapter.SendChanged();
+
+//             adapter.addClientStream(stream);
+//             long pos = stream.Position;
+
+//             adapter.Begin();
+//             cond.Add(Condition.Level.FAULT, "A Fault", "111");
+//             adapter.SendChanged();
+
+//             stream.Seek(pos, SeekOrigin.Begin);
+//             byte[] buffer = new byte[1024];
+//             int count = stream.Read(buffer, 0, 1024);
+//             string line = encoder.GetString(buffer, 0, count);
+//             Assert.IsTrue(line.EndsWith("cond|FAULT|111|||A Fault\n"));
+//         }
+
+//         [Test]
+//         public void should_send_normal_when_fault_is_not_reasserted()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+
+//             Condition cond = new Condition("cond");
+//             cond.Normal();
+//             adapter.AddDataItem(cond);
+//             adapter.SendChanged();
+
+//             adapter.addClientStream(stream);
+
+//             adapter.Begin();
+//             cond.Add(Condition.Level.FAULT, "A Fault", "111");
+//             adapter.SendChanged();
+//             long pos = stream.Position;
+
+//             adapter.Begin();
+//             adapter.SendChanged();
+
+//             stream.Seek(pos, SeekOrigin.Begin);
+//             byte[] buffer = new byte[1024];
+//             int count = stream.Read(buffer, 0, 1024);
+//             string line = encoder.GetString(buffer, 0, count);
+//             Assert.IsTrue(line.EndsWith("cond|NORMAL||||\n"));
+//         }
+
+//         [Test]
+//         public void should_send_normal_for_single_fault_when_more_than_one_are_active()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+
+//             Condition cond = new Condition("cond");
+//             cond.Normal();
+//             adapter.AddDataItem(cond);
+//             adapter.SendChanged();
+
+//             adapter.addClientStream(stream);
+
+//             adapter.Begin();
+//             cond.Add(Condition.Level.FAULT, "A Fault", "111");
+//             cond.Add(Condition.Level.FAULT, "Another Fault", "112");
+//             adapter.SendChanged();
+//             long pos = stream.Position;
+
+//             adapter.Begin();
+//             cond.Add(Condition.Level.FAULT, "Another Fault", "112");
+//             adapter.SendChanged();
+
+//             stream.Seek(pos, SeekOrigin.Begin);
+//             byte[] buffer = new byte[1024];
+//             int count = stream.Read(buffer, 0, 1024);
+//             string line = encoder.GetString(buffer, 0, count);
+//             Assert.IsTrue(line.EndsWith("cond|NORMAL|111|||\n"));
+//         }
+
+//         [Test]
+//         public void should_send_normal_when_last_active_condition_is_cleared()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+
+//             Condition cond = new Condition("cond");
+//             cond.Normal();
+//             adapter.AddDataItem(cond);
+//             adapter.SendChanged();
+
+//             adapter.addClientStream(stream);
+
+//             adapter.Begin();
+//             cond.Add(Condition.Level.FAULT, "A Fault", "111");
+//             cond.Add(Condition.Level.FAULT, "Another Fault", "112");
+//             adapter.SendChanged();
+
+//             adapter.Begin();
+//             cond.Add(Condition.Level.FAULT, "Another Fault", "112");
+//             adapter.SendChanged();
+//             long pos = stream.Position;
+
+//             adapter.Begin();
+//             adapter.SendChanged();
+            
+//             stream.Seek(pos, SeekOrigin.Begin);
+//             byte[] buffer = new byte[1024];
+//             int count = stream.Read(buffer, 0, 1024);
+//             string line = encoder.GetString(buffer, 0, count);
+//             Assert.IsTrue(line.EndsWith("cond|NORMAL||||\n"));
+//         }
+
+//         [Test]
+//         public void should_not_clear_a_simple_condition()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+
+//             Condition cond = new Condition("cond", true);
+//             cond.Normal();
+//             adapter.AddDataItem(cond);
+//             adapter.SendChanged();
+
+//             adapter.addClientStream(stream);
+
+//             adapter.Begin();
+//             cond.Add(Condition.Level.FAULT, "A Fault", "111");
+//             adapter.SendChanged();
+//             long pos = stream.Position;
+
+//             adapter.Begin();
+//             adapter.SendChanged();
+
+//             Assert.AreEqual(pos, stream.Position);
+//         }
+
+//         [Test]
+//         public void should_manually_clear_condition()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+
+//             Condition cond = new Condition("cond", true);
+//             cond.Normal();
+//             adapter.AddDataItem(cond);
+//             adapter.SendChanged();
+
+//             adapter.addClientStream(stream);
+
+//             adapter.Begin();
+//             cond.Add(Condition.Level.FAULT, "A Fault", "111");
+//             adapter.SendChanged();
+//             long pos = stream.Position;
+
+//             adapter.Begin();
+//             cond.Clear("111");
+//             adapter.SendChanged();
+
+//             stream.Seek(pos, SeekOrigin.Begin);
+//             byte[] buffer = new byte[1024];
+//             int count = stream.Read(buffer, 0, 1024);
+//             string line = encoder.GetString(buffer, 0, count);
+//             Assert.IsTrue(line.EndsWith("cond|NORMAL||||\n"));
+//         }
+
+//         [Test]
+//         public void shoud_manually_clear_one_condition_when_multiple_are_present()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+
+//             Condition cond = new Condition("cond", true);
+//             cond.Normal();
+//             adapter.AddDataItem(cond);
+//             adapter.SendChanged();
+
+//             adapter.addClientStream(stream);
+
+//             adapter.Begin();
+//             cond.Add(Condition.Level.FAULT, "A Fault", "111");
+//             cond.Add(Condition.Level.FAULT, "Another Fault", "112");
+//             adapter.SendChanged();
+//             long pos = stream.Position;
+
+//             adapter.Begin();
+//             cond.Clear("111");
+//             adapter.SendChanged();
+
+//             stream.Seek(pos, SeekOrigin.Begin);
+//             byte[] buffer = new byte[1024];
+//             int count = stream.Read(buffer, 0, 1024);
+//             string line = encoder.GetString(buffer, 0, count);
+//             Assert.IsTrue(line.EndsWith("cond|NORMAL|111|||\n"));
+//         }
+
+//         [Test]
+//         public void remove_asset()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+//             adapter.SendChanged();
+            
+//             Mock<IAsset> mockAsset = new Mock<IAsset>();
+//             mockAsset
+//                 .Setup(a => a.AssetId)
+//                 .Returns("324");
+
+//             long pos = stream.Position;
+//             adapter.addClientStream(stream);
+//             adapter.RemoveAsset(mockAsset.Object);
+
+//             stream.Seek(pos, SeekOrigin.Begin);
+//             byte[] buffer = new byte[1024];
+//             int count = stream.Read(buffer, 0, 1024);
+//             string line = encoder.GetString(buffer, 0, count);
+//             Console.WriteLine(line);
+//             line.Should().EndWith("|@REMOVE_ASSET@|324\n");
+//         }
+
+//         [Test]
+//         public void add_asset()
+//         {
+//             Event avail = new Event("avail");
+//             adapter.AddDataItem(avail);
+//             avail.Value = "AVAILABLE";
+//             adapter.SendChanged();
+            
+//             Mock<IAsset> mockAsset = new Mock<IAsset>();
+//             mockAsset
+//                 .Setup(a => a.AssetId)
+//                 .Returns("324");
+//             mockAsset
+//                 .Setup(a => a.AssetType)
+//                 .Returns("test_asset");
+            
+//             XmlWriter modifiedWriter = new XmlTextWriter(new MemoryStream(), Encoding.UTF8);
+
+//             mockAsset
+//                 .Setup(a => a.ToXml(It.IsAny<XmlWriter>()))
+//                 .Callback<XmlWriter>(w => {
+//                     modifiedWriter = w;
+//                     modifiedWriter.WriteElementString("hi", "there");
+//                 })
+//                 .Returns(modifiedWriter);
+
+//             long pos = stream.Position;
+//             adapter.addClientStream(stream);
+//             adapter.AddAsset(mockAsset.Object);
+
+//             stream.Seek(pos, SeekOrigin.Begin);
+//             byte[] buffer = new byte[1024];
+//             int count = stream.Read(buffer, 0, 1024);
+//             string line = encoder.GetString(buffer, 0, count);
+//             line.Should().EndWith("|@ASSET@|324|test_asset|--multiline--ABCD\n<hi>there</hi>\n--multiline--ABCD\n");
+//         }
+//     }
+// }

@@ -1,6 +1,6 @@
-using MTConnect.Adapter;
 using MTConnect.Assets;
 using MTConnect.DataElements;
+using System;
 using System.IO;
 
 namespace MTConnect.Adapter
@@ -26,18 +26,12 @@ namespace MTConnect.Adapter
         /// <param name="asset">An asset </param>
         /// <param name="sendOnNewClientConnect">Should this be resent on  </param>
         void AddAsset(IAsset asset, bool sendOnNewClientConnect = true);
-
-        /// <summary>
-        /// Add an Agent to receive updates from this adapter
-        /// </summary>
-        /// <param name="aStream">The data item for the adapter to begin tracking</param>
-        void addClientStream(Stream aStream);
         
         /// <summary>
         /// Add a data item to the adapter
         /// </summary>
         /// <param name="aDI">The data item for the adapter to begin tracking</param>
-        void AddDataItem(DataItem aDI);
+        void AddDataItem(IDatum datum);
 
         /// <summary>
         /// Start the TCP sever for the Agent to connect to
@@ -58,7 +52,7 @@ namespace MTConnect.Adapter
         /// Remove the data item from the adapter
         /// </summary>
         /// <param name="aItem">The data item for the adapter to cease tracking</param>
-        void RemoveDataItem(DataItem aItem);
+        void RemoveDataItem(IDatum datum);
 
         /// <summary>
         /// Marks an Asset as removed
@@ -76,7 +70,12 @@ namespace MTConnect.Adapter
         /// Send all data to the clients.
         /// </summary>
         /// <param name="timestamp">When to mark the timestamp of the update</param>
-        void SendChanged(string timestamp = null);
+        void SendChanged(DateTime timestamp);
+
+        /// <summary>
+        /// Send all data to the clients using the current timestamp
+        /// </summary>
+        void SendChanged();
 
         /// <summary>
         /// Send a command to the Agent
