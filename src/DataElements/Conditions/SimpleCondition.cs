@@ -109,10 +109,19 @@ namespace MTConnect.DataElements.Conditions
             }
             Available = true;
 
-            // Set the timestamp on the ConditionValue using _timeProvider iff the Timestamp has not been set
+            // Set the timestamp, device, and condition name on the ConditionValue using _timeProvider iff the Timestamp has not been set
             if(conditionValue.Timestamp == default(DateTime))
             {
                 conditionValue.Timestamp = _timeProvider.Now;
+            }
+
+            if (conditionValue.DeviceName == null)
+            {
+                conditionValue.DeviceName = Device;
+            }
+            if (conditionValue.ConditionName == null || conditionValue.ConditionName == "")
+            {
+                conditionValue.ConditionName = Name;
             }
 
             if (!Value.Contains(conditionValue))

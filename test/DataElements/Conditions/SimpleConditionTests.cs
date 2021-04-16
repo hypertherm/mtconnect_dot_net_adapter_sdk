@@ -128,7 +128,6 @@ namespace MTConnect.utests.DataElements.Conditions
 
             uut.HasChanged.Should().BeFalse();
             
-            
             uut.RemoveCondition(value);
 
             uut.HasChanged.Should().BeTrue();
@@ -221,6 +220,29 @@ namespace MTConnect.utests.DataElements.Conditions
             uut.AddToUpdate(sb);
             actual = sb.ToString();
             actual.Should().BeEmpty();
+        }
+
+         [Fact]
+        public void AddConditionValueWithoutTimestampDeviceNameSetsThese()
+        {
+            _mockTimeProvider
+                .Setup(t => t.Now)
+                .Returns(new DateTime(2021, 1, 2, 3, 4, 5, DateTimeKind.Utc));
+            
+            ConditionValue condition = new ConditionValue
+            {
+                NativeCode = "native code 1",
+                NativeSeverity = "native severity 1",
+                Level = ConditionLevel.Fault,
+                Qualifier = ConditionQualifier.None,
+                Message = "message 1"
+            };
+
+            uut.AddCondition(condition);
+
+            condition.Timestamp.Should().Be(_mockTimeProvider.Object.Now);
+            condition.DeviceName.Should().Be("device");
+            condition.ConditionName.Should().Be("condition");
         }
     }
 }
