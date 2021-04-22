@@ -61,8 +61,6 @@ namespace MTConnect.utests.Adapter
         {
             stream = new MemoryStream(2048);
             adapter = new MTConnectAdapterTests();
-            adapter.Start();
-            while (!adapter.Running) Thread.Sleep(10);
         }
 
         [TearDown]
@@ -84,6 +82,7 @@ namespace MTConnect.utests.Adapter
             adapter.AddDataItem(avail);
             avail.Value = "AVAILABLE";
 
+            adapter.Start();
             adapter.addClientStream(stream);
             stream.Seek(0, SeekOrigin.Begin);
             
