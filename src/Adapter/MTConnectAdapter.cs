@@ -153,7 +153,10 @@ namespace MTConnect.Adapter
         /// <param name="aStream">A IO Stream</param>
         public void addClientStream(Stream aStream)
         {
-            mClients.Add(aStream);
+            lock(mClients)
+            {
+                mClients.Add(aStream);
+            }
             SendAllTo(aStream);
         }
 
@@ -215,19 +218,28 @@ namespace MTConnect.Adapter
             {
                 _commandsToSendOnConnect.Add(new Tuple<DeviceCommand, string>(command, value));
             }
+
+            lock(mClients)
+            {
+                foreach (Stream client in mClients)
+                {
+                    lock (client)
+                    {
+                        _sendCommandToClient(client, command, value);
+                    }
+                }
+            }
+        }
+
+        private void _sendCommandToClient(Stream clientStream, DeviceCommand command, string value)
+        {
             string commandLine = $"* {_commandConverter[command]}: {value}\n";
             byte[] message = mEncoder.GetBytes(commandLine.ToCharArray());
 
             if (Verbose)
                 Console.WriteLine("Sending: " + commandLine);
 
-            foreach (Stream client in mClients)
-            {
-                lock (client)
-                {
-                    WriteToClient(client, message);
-                }
-            }
+            WriteToClient(clientStream, message);
         }
 
         /// <summary>
@@ -357,8 +369,9 @@ namespace MTConnect.Adapter
         public void FlushAll()
         {
             foreach (Stream client in mClients)
+            {
                 client.Flush();
-
+            }
         }
 
         /// <summary>
@@ -466,7 +479,10 @@ namespace MTConnect.Adapter
                 catch (Exception f) {
                     Console.WriteLine("Error during close: " + f.Message);
                 }
-                mClients.Remove(aClient);
+                lock (mClients)
+                {
+                    mClients.Remove(aClient);
+                }
             }
         }
 
@@ -485,7 +501,30 @@ namespace MTConnect.Adapter
             mActiveClients.AddCount();
             TcpClientProvider client = (TcpClientProvider) obj;
             Stream clientStream = client.GetStream();
-            mClients.Add(clientStream);
+            lock (mClients)
+            {
+                mClients.Add(clientStream);
+            }
+            
+            // Send the current state and replay commands to new clients
+            SendAllTo(clientStream);
+            foreach(Tuple<DeviceCommand, string> tuple in _commandsToSendOnConnect)
+            {
+                _sendCommandToClient(clientStream, tuple.Item1, tuple.Item2);
+            }
+            byte[] assetMessage;
+            foreach(IAsset a in _assetsToAdd)
+            {
+                assetMessage = mEncoder.GetBytes(MakeAddAssetString(a));
+                WriteToClient(clientStream, assetMessage);
+
+            }
+            foreach(IAsset a in _assetsToRemove)
+            {
+                assetMessage = mEncoder.GetBytes(MakeRemoveAssetString(a));
+                WriteToClient(clientStream, assetMessage);
+            }
+        
             List<Socket> readList = new List<Socket>();
             bool heartbeatActive = false;
 
@@ -562,7 +601,10 @@ namespace MTConnect.Adapter
             {
                 try
                 {
-                    mClients.Remove(clientStream);
+                    lock (mClients)
+                    {
+                        mClients.Remove(clientStream);
+                    }
                     client.Close();
                 }
                 catch (Exception e)
@@ -593,23 +635,6 @@ namespace MTConnect.Adapter
                     Thread clientThread = new Thread(new ParameterizedThreadStart(HeartbeatClient));
                     clientThread.Start(client);
 
-                    SendAllTo(client.GetStream());
-                    foreach(Tuple<DeviceCommand, string> tuple in _commandsToSendOnConnect)
-                    {
-                        SendCommand(tuple.Item1, tuple.Item2, false);
-                    }
-                    byte[] assetMessage;
-                    foreach(IAsset a in _assetsToAdd)
-                    {
-                        assetMessage = mEncoder.GetBytes(MakeAddAssetString(a));
-                        WriteToClient(client.GetStream(), assetMessage);
-
-                    }
-                    foreach(IAsset a in _assetsToRemove)
-                    {
-                        assetMessage = mEncoder.GetBytes(MakeRemoveAssetString(a));
-                        WriteToClient(client.GetStream(), assetMessage);
-                    }
                     clientThread.Join();
                 }
             }
@@ -648,12 +673,14 @@ namespace MTConnect.Adapter
                 // Wait 2 seconds for the thread to exit.
                 mListenThread.Join(2*Heartbeat);
 
-                foreach (Object obj in mClients)
+                lock(mClients)
                 {
-                    Stream client = (Stream)obj;
-                    client.Close();
+                    foreach (Stream client in mClients)
+                    {
+                        client.Close();
+                    }
+                    mClients.Clear();
                 }
-                mClients.Clear();
 
                 // Wait for all client threads to exit.
                 mActiveClients.Wait(2000);

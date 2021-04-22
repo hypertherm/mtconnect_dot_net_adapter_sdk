@@ -1,4 +1,4 @@
-name: .NET Core
+name: CI on PR/Merge
 
 on:
   push:
@@ -6,42 +6,74 @@ on:
   pull_request:
     branches: [ master ]
 
+env:
+  BUILD_CONFIGURATION: 'Release'
+  NUGET_FEED: 'https://nuget.pkg.github.com/hypertherm/index.json'
+  NUGET_PACK_PATH: './nuget-output'
+
 jobs:
   build:
 
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v2
-      # Use GitVersion to setup versioning for package details
-    - name: Fetch all history for all tags and branches
-      run: git fetch --prune --unshallow
-    - name: Install GitVersion
-      uses: gittools/actions/gitversion/setup@v0.9.2
+
+    - name: Checkout Repo
+      id: checkout
+      uses: actions/checkout@main
       with:
-          versionSpec: '5.2.x'
-    - name: Use GitVersion
+        fetch-depth: 0
+
+    # Use GitVersion to setup versioning for package details
+    - name: Install GitVersion # From here: https://github.com/GitTools/actions
+      id: install_gitversion
+      uses: gittools/actions/gitversion/setup@v0.9.9
+      with:
+          versionSpec: '5.6.7'
+
+    - name: Generate Version Number with GitVersion
       id: gitversion # step id used as reference for output values
-      uses: gittools/actions/gitversion/execute@v0.9.2
+      uses: gittools/actions/gitversion/execute@v0.9.9
+      with:
+        useConfigFile: true
+
     - name: Print GitVersion computed
+      id: artifactoryversion
+      env:
+        VERSION: ${{steps.gitversion.outputs.Major}}.${{steps.gitversion.outputs.Minor}}.${{steps.gitversion.outputs.Patch}}${{steps.gitversion.outputs.PreReleaseNumber}}
       run: |
         echo "LegacySemVer: ${{ steps.gitversion.outputs.legacySemVer }}"
         echo "AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
-        
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 2.2.203
-        source-url: https://nuget.pkg.github.com/hypertherm/index.json
-      env:
-        NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        echo "MajorMinorPrerelease: ${{ env.VERSION }}"
+
+        echo "::set-output name=nuGetVersion::${{ env.VERSION }}"
+
     - name: Install dependencies
+      id: restore_dependencies
       run: dotnet restore
+
     - name: Build
-      run: dotnet build src/mtconnect_adapter_sdk.csproj --configuration Release --no-restore -p:Version="${{ steps.gitversion.outputs.assemblySemVer }}"
+      id: dotnet_build
+      run: dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore -p:Version="${{ steps.artifactoryversion.outputs.nuGetVersion }}"
+
     - name: Test
-      run: dotnet test test/ --no-restore --verbosity normal
+      id: unit_test
+      run: dotnet test --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore --no-build --verbosity normal
+
     - name: Create package
-      run: dotnet pack src/mtconnect_adapter_sdk.csproj --configuration release -p:PackageVersion="${{ steps.gitversion.outputs.legacySemVer }}"
-    - name: Publish Packages
-      run: dotnet nuget push '**/*.nupkg'
+      id: nuget_pack
+      run: dotnet pack --configuration ${{ env.BUILD_CONFIGURATION }} -o ${{ env.NUGET_PACK_PATH }} --no-restore --no-build -p:Version=${{ steps.artifactoryversion.outputs.nuGetVersion }}
+
+    - name: Archive NuGets artifacts
+      id: archive_nugets
+      uses: actions/upload-artifact@main
+      with:
+        name: NuGet-Packages
+        path: ${{ env.NUGET_PACK_PATH }}
+
+    - name: Push generated package to GitHub Packages
+      id: nuget_push_github_packages
+      run: |
+        ls "**/*.nupkg"
+        dotnet nuget add source ${{ env.NUGET_FEED }} -n hypertherm-org-github -u hypertherm -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
+        dotnet nuget push "**/*.nupkg" --source hypertherm-org-github --skip-duplicate --no-symbols true -k ${{ secrets.GITHUB_TOKEN }}
