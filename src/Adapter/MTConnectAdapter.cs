@@ -218,23 +218,28 @@ namespace MTConnect.Adapter
             {
                 _commandsToSendOnConnect.Add(new Tuple<DeviceCommand, string>(command, value));
             }
-            string commandLine = $"* {_commandConverter[command]}: {value}\n";
-            byte[] message = mEncoder.GetBytes(commandLine.ToCharArray());
 
-            if (Verbose)
-                Console.WriteLine("Sending: " + commandLine);
-
-            
             lock(mClients)
             {
                 foreach (Stream client in mClients)
                 {
                     lock (client)
                     {
-                        WriteToClient(client, message);
+                        _sendCommandToClient(client, command, value);
                     }
                 }
             }
+        }
+
+        private void _sendCommandToClient(Stream clientStream, DeviceCommand command, string value)
+        {
+            string commandLine = $"* {_commandConverter[command]}: {value}\n";
+            byte[] message = mEncoder.GetBytes(commandLine.ToCharArray());
+
+            if (Verbose)
+                Console.WriteLine("Sending: " + commandLine);
+
+            WriteToClient(clientStream, message);
         }
 
         /// <summary>
@@ -505,7 +510,7 @@ namespace MTConnect.Adapter
             SendAllTo(clientStream);
             foreach(Tuple<DeviceCommand, string> tuple in _commandsToSendOnConnect)
             {
-                SendCommand(tuple.Item1, tuple.Item2, false);
+                _sendCommandToClient(clientStream, tuple.Item1, tuple.Item2);
             }
             byte[] assetMessage;
             foreach(IAsset a in _assetsToAdd)
