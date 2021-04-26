@@ -34,7 +34,7 @@ namespace MTConnect.utests.Adapter
     [TestFixture]
     public class MTConnectAdapterTests : MTConnectAdapter
     {
-        ASCIIEncoding encoder = new ASCIIEncoding();
+        Encoding encoder = new UTF8Encoding();
         Stream stream;
 
         private Mock<TcpClientProvider> _mockTcpClientProvider;

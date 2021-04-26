@@ -99,7 +99,7 @@ namespace MTConnect.Adapter
         /// <summary>
         /// The ascii encoder for creating the messages.
         /// </summary>
-        ASCIIEncoding mEncoder = new ASCIIEncoding();
+        private Encoding _encoder = new UTF8Encoding();
 
         public bool Verbose { set; get; }
 
@@ -110,8 +110,7 @@ namespace MTConnect.Adapter
             get { return mHeartbeat; } 
             set { 
                 mHeartbeat = value;
-                ASCIIEncoding encoder = new ASCIIEncoding();
-                PONG = encoder.GetBytes("* PONG " + mHeartbeat.ToString() + "\n");
+                PONG = _encoder.GetBytes("* PONG " + mHeartbeat.ToString() + "\n");
             } 
         }
 
@@ -234,7 +233,7 @@ namespace MTConnect.Adapter
         private void _sendCommandToClient(Stream clientStream, DeviceCommand command, string value)
         {
             string commandLine = $"* {_commandConverter[command]}: {value}\n";
-            byte[] message = mEncoder.GetBytes(commandLine.ToCharArray());
+            byte[] message = _encoder.GetBytes(commandLine.ToCharArray());
 
             if (Verbose)
                 Console.WriteLine("Sending: " + commandLine);
@@ -404,14 +403,14 @@ namespace MTConnect.Adapter
                     line += "|" + di.ToString();
                 line += "\n";
 
-                byte[] message = mEncoder.GetBytes(line.ToCharArray());
+                byte[] message = _encoder.GetBytes(line.ToCharArray());
                 aClient.Write(message, 0, message.Length);
 
                 foreach (DataItem di in separate)
                 {
                     line = timestamp;
                     line += "|" + di.ToString() + "\n";
-                    message = mEncoder.GetBytes(line.ToCharArray());
+                    message = _encoder.GetBytes(line.ToCharArray());
                     WriteToClient(aClient, message);
                 }
 
@@ -425,7 +424,7 @@ namespace MTConnect.Adapter
         /// <param name="line">A line of text</param>
         public void SendToAll(string line)
         {
-            byte[] message = mEncoder.GetBytes(line.ToCharArray());
+            byte[] message = _encoder.GetBytes(line.ToCharArray());
             if (Verbose)
                 Console.WriteLine("Sending: " + line);
             foreach (Stream client in mClients)
@@ -515,13 +514,13 @@ namespace MTConnect.Adapter
             byte[] assetMessage;
             foreach(IAsset a in _assetsToAdd)
             {
-                assetMessage = mEncoder.GetBytes(MakeAddAssetString(a));
+                assetMessage = _encoder.GetBytes(MakeAddAssetString(a));
                 WriteToClient(clientStream, assetMessage);
 
             }
             foreach(IAsset a in _assetsToRemove)
             {
-                assetMessage = mEncoder.GetBytes(MakeRemoveAssetString(a));
+                assetMessage = _encoder.GetBytes(MakeRemoveAssetString(a));
                 WriteToClient(clientStream, assetMessage);
             }
         
@@ -529,7 +528,6 @@ namespace MTConnect.Adapter
             bool heartbeatActive = false;
 
             byte[] message = new byte[4096];
-            ASCIIEncoding encoder = new ASCIIEncoding();
             int length = 0;
 
             try
@@ -576,7 +574,7 @@ namespace MTConnect.Adapter
                         if (message[i] == '\n')
                         {
 
-                            String line = encoder.GetString(message, eol, i);
+                            String line = _encoder.GetString(message, eol, i);
                             if (Receive(clientStream, line)) heartbeatActive = true;
                             eol = i + 1;
                         }
