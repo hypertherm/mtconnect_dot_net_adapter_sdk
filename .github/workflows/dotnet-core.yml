@@ -77,9 +77,15 @@ jobs:
         name: NuGet-Packages
         path: ${{ env.NUGET_PACK_PATH }}
 
-    - name: Push generated package to GitHub Packages
-      id: nuget_push_github_packages
-      run: |
-        ls "**/*.nupkg"
-        dotnet nuget add source ${{ env.NUGET_FEED }} -n hypertherm-org-github -u hypertherm -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
-        dotnet nuget push "**/*.nupkg" --source hypertherm-org-github --skip-duplicate --no-symbols true -k ${{ secrets.GITHUB_TOKEN }}
+  # Push MSI to Artifactory
+    - name: Push Installer to Artifactory
+      id: Push_to_Artifactory
+      run: | 
+          & jfrog rt u ${{ env.bundle }} ${{ env.dest }} --target-props "${{ env.props }}" --access-token ${{ env.JF_TOKEN }} --url ${{ env.JF_URL }}
+          & echo "Artifact uploaded to: ${{ env.url }}"
+      env:
+        productVersion: ${{ steps.gitVersion.outputs.FullSemVer}}
+        dest: "controls-nuget/Hypertherm/mtconnect_adapter_sdk/${{ steps.gitVersion.outputs.BranchName }}/Edge_Connect_Suite-${{ steps.gitVersion.outputs.FullSemVer }}.exe"
+        props: "Version=${{ steps.gitVersion.outputs.FullSemVer }};Manufacturer=Hypertherm;Product=MT Connect Adapter SDK"
+        url: "https://artifactory.hypertherm.com/ui/repos/tree/Generai/controls-nuget/Hypertherm/mtconnect_adapter_sdk/${{ steps.gitVersion.outputs.FullSemVer }}.exe"
+
