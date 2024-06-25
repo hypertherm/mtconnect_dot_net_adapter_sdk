@@ -27,9 +27,11 @@ namespace MTConnect.DataElements
     /// </summary>
     public class Condition : DataItem
     {
+        private readonly object lockObject = new object();
         /// <summary>
         /// The four values for the condition.
         /// </summary> 
+        /// 
         public enum Level
         {
             UNAVAILABLE,
@@ -378,11 +380,15 @@ namespace MTConnect.DataElements
                 // For a simple condition, we are only looking for the changed set.
                 // Since we don't care about the mark and sweep, this is similar to 
                 // all other data items.
-                foreach (Active active in mActiveList)
+                lock (lockObject)
                 {
-                    if (active.Changed)
-                        list.Add(active);
+                    foreach (Active active in mActiveList)
+                    {
+                        if (active.Changed)
+                            list.Add(active);
+                    }
                 }
+
             }
             else if (mBegun && mPrepared)
             {
