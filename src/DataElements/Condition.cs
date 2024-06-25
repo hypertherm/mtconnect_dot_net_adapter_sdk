@@ -372,8 +372,12 @@ namespace MTConnect.DataElements
             if (all) 
             {
                 // Just grab all the activations.
-                foreach (Active active in mActiveList)
-                    list.Add(active);
+                lock (lockObject)
+                {
+                    foreach (Active active in mActiveList)
+                        list.Add(active);
+                }
+
             }
             else if (mSimple)
             {
@@ -395,15 +399,19 @@ namespace MTConnect.DataElements
                 if (mChanged)
                 {
                     // Find all the changed activations and add them to the list                    
-                    foreach (Active active in mActiveList)
+                    lock (lockObject)
                     {
-                        if (active.Changed)
-                            list.Add(active);
+                        foreach (Active active in mActiveList)
+                        {
+                            if (active.Changed)
+                                list.Add(active);
+                        }
                     }
                 }
             }
 
             return list;
         }
+
     }
 }
