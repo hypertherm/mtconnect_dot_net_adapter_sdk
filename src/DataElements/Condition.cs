@@ -369,44 +369,35 @@ namespace MTConnect.DataElements
         public override List<DataItem> ItemList(bool all = false)
         {
             List<DataItem> list = new List<DataItem>();
-            if (all) 
+            IEnumerable<Active> filteredList;
+
+            lock (lockObject)
             {
-                // Just grab all the activations.
-                lock (lockObject)
+                if (all)
                 {
-                    foreach (Active active in mActiveList)
-                        list.Add(active);
+                    // If 'all' is true, include all activations.
+                    filteredList = mActiveList;
+                }
+                else if (mSimple)
+                {
+                    // For a simple condition, include only the changed activations.
+                    filteredList = mActiveList.Where(active => active.Changed);
+                }
+                else if (mBegun && mPrepared && mChanged)
+                {
+                    // For non-simple conditions that have begun and are prepared, include only the changed activations.
+                    filteredList = mActiveList.Where(active => active.Changed);
+                }
+                else
+                {
+                    // If none of the above conditions are met, return an empty list.
+                    filteredList = Enumerable.Empty<Active>();
                 }
 
-            }
-            else if (mSimple)
-            {
-                // For a simple condition, we are only looking for the changed set.
-                // Since we don't care about the mark and sweep, this is similar to 
-                // all other data items.
-                lock (lockObject)
+                // Add the filtered activations to the list.
+                foreach (Active active in filteredList)
                 {
-                    foreach (Active active in mActiveList)
-                    {
-                        if (active.Changed)
-                            list.Add(active);
-                    }
-                }
-
-            }
-            else if (mBegun && mPrepared)
-            {
-                if (mChanged)
-                {
-                    // Find all the changed activations and add them to the list                    
-                    lock (lockObject)
-                    {
-                        foreach (Active active in mActiveList)
-                        {
-                            if (active.Changed)
-                                list.Add(active);
-                        }
-                    }
+                    list.Add(active);
                 }
             }
 
@@ -414,4 +405,5 @@ namespace MTConnect.DataElements
         }
 
     }
+
 }
