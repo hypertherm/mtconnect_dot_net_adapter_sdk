@@ -21,7 +21,6 @@ jobs:
       insignia: "'C:\\Program Files (x86)\\WiX Toolset v3.14\\bin\\insignia.exe'"
       certificatePath: '.\GitHubActionsWorkflow.pfx'
       BUILD_CONFIGURATION: Release
-      bundle: 'Installer\EDGEConnectSuite\bin\Release\EDGE_Connect_Suite.exe'
       JF_URL: 'https://artifactory.hypertherm.com/artifactory'
       JF_TOKEN: ${{ secrets.HYP_JF_TOKEN }}
       JFROG_CLI_AVOID_NEW_VERSION_WARNING: true
@@ -98,7 +97,7 @@ jobs:
           & echo "Artifact uploaded to: ${{ env.url }}"
       env:
         productVersion: ${{ steps.gitVersion.outputs.FullSemVer}}
-        dest: "controls-nuget/Hypertherm/mtconnect_adapter_sdk/${{ steps.gitVersion.outputs.BranchName }}/Edge_Connect_Suite-${{ steps.gitVersion.outputs.FullSemVer }}.exe"
+        dest: "controls-nuget/Hypertherm/mtconnect_adapter_sdk/GitHubBuilt/${{ steps.gitVersion.outputs.BranchName }}/mtconnect_adapter_adk.${{ steps.gitVersion.outputs.FullSemVer }}.nupkg"
         props: "Version=${{ steps.gitVersion.outputs.FullSemVer }};Manufacturer=Hypertherm;Product=MT Connect Adapter SDK"
-        url: "https://artifactory.hypertherm.com/ui/repos/tree/Generai/controls-nuget/Hypertherm/mtconnect_adapter_sdk/${{ steps.gitVersion.outputs.FullSemVer }}.exe"
+        url: "https://artifactory.hypertherm.com/ui/repos/tree/Generai/controls-nuget/Hypertherm/mtconnect_adapter_sdk/${{ steps.gitVersion.outputs.FullSemVer }}.nupkg"
 
