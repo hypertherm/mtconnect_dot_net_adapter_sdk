@@ -90,14 +90,25 @@ jobs:
         path: ${{ env.NUGET_PACK_PATH }}
 
   # Push MSI to Artifactory
-    - name: Push Installer to Artifactory
-      id: Push_to_Artifactory
-      run: | 
-          & jfrog rt u ${{ env.NUGET_PACK_PATH }} ${{ env.dest }} --target-props "${{ env.props }}" --access-token ${{ env.JF_TOKEN }} --url ${{ env.JF_URL }}
-          & echo "Artifact uploaded to: ${{ env.url }}"
-      env:
-        productVersion: ${{ steps.gitVersion.outputs.FullSemVer}}
-        dest: "controls-nuget/Hypertherm/mtconnect_adapter_sdk/GitHubBuilt/${{ steps.gitVersion.outputs.BranchName }}/mtconnect_adapter_adk.${{ steps.gitVersion.outputs.FullSemVer }}.nupkg"
-        props: "Version=${{ steps.gitVersion.outputs.FullSemVer }};Manufacturer=Hypertherm;Product=MT Connect Adapter SDK"
-        url: "https://artifactory.hypertherm.com/ui/repos/tree/Generai/controls-nuget/Hypertherm/mtconnect_adapter_sdk/${{ steps.gitVersion.outputs.FullSemVer }}.nupkg"
+  upload_to_artifactory: # use an interal VM to upload to artifactory
+    runs-on: [self-hosted, Windows, X64, phoenix]
+    env:
+        NUGET_ARTIFACTORY_FEED: 'https://artifactory.hypertherm.com/artifactory/api/nuget/controls-nuget/Hypertherm/mtconnect_adapter_sdk'
+
+    steps:
+      - name: clean workspace
+        shell: bash
+        run: |
+          echo "Cleaning up previous run"
+          rm -rfv "${{ github.workspace }}"/*
+      - name: Download the package # puts files in artifact in top level
+        id: dl_nuget_artifacts
+        uses: actions/download-artifact@main
+        with:
+          name: NuGet-Packages
+      - name: Push generated package to Artifactory
+        id: nuget_push_artifactory
+        run: |
+          ls "**/*.nupkg"
+          dotnet nuget push "**/*.nupkg" --source ${{ env.NUGET_ARTIFACTORY_FEED }} --skip-duplicate --no-symbols -k github-actions:${{ secrets.HYP_ARTIFACTORY_TOKEN }}
 
