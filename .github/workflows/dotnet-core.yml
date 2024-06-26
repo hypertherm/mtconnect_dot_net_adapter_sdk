@@ -19,7 +19,7 @@ env:
 jobs:
   build:
   
-    runs-on: [self-hosted, Windows, X64, phoenix]
+    runs-on: windows-2019
 
     env:
       signtool: "'C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.17763.0\\x86\\signtool.exe'"
@@ -87,9 +87,11 @@ jobs:
       id: nuget_pack
       run: dotnet pack --configuration ${{ env.BUILD_CONFIGURATION }} -o ${{ env.NUGET_PACK_PATH }} --no-restore --no-build -p:Version=${{ steps.artifactoryversion.outputs.nuGetVersion }}
 
-    - name: Push generated package to Artifactory
-      id: nuget_push_artifactory
+    - name: Push generated package to GitHub Packages
+      id: nuget_push_github_packages
       run: |
-         ls "**/*.nupkg"
-         dotnet nuget push "**/*.nupkg" --source ${{ env.NUGET_ARTIFACTORY_FEED }} --skip-duplicate --no-symbols -k github-actions:${{ secrets.HYP_ARTIFACTORY_TOKEN }}
+        ls "**/*.nupkg"
+        dotnet nuget add source ${{ env.NUGET_FEED }} -n hypertherm-org-github -u hypertherm -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
+        dotnet nuget push "**/*.nupkg" --source hypertherm-org-github --skip-duplicate --no-symbols -k ${{ secrets.GITHUB_TOKEN }}
+
 
