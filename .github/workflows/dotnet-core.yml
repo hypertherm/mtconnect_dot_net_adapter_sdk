@@ -93,7 +93,7 @@ jobs:
     - name: Push Installer to Artifactory
       id: Push_to_Artifactory
       run: | 
-          & jfrog rt u ${{ env.bundle }} ${{ env.dest }} --target-props "${{ env.props }}" --access-token ${{ env.JF_TOKEN }} --url ${{ env.JF_URL }}
+          & jfrog rt u ${{ env.NUGET_PACK_PATH }} ${{ env.dest }} --target-props "${{ env.props }}" --access-token ${{ env.JF_TOKEN }} --url ${{ env.JF_URL }}
           & echo "Artifact uploaded to: ${{ env.url }}"
       env:
         productVersion: ${{ steps.gitVersion.outputs.FullSemVer}}
