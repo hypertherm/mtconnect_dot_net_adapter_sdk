@@ -8,13 +8,27 @@ on:
 
 env:
   BUILD_CONFIGURATION: 'Release'
+  DOTNET_VERSION: '3.1.x'  # set this to the dotnet version to use
+  NETFRAMEWORK_DOWNLOAD_URL: 'https://go.microsoft.com/fwlink/?linkid=2099469' # Version of NetFramework tools to use to build
+  NETFRAMEWORK_FILE_NAME: '.\netframework46_installer.exe'
   NUGET_FEED: 'https://nuget.pkg.github.com/hypertherm/index.json'
   NUGET_PACK_PATH: './nuget-output'
+  NUGET_ARTIFACTORY_FEED: 'https://artifactory.hypertherm.com/artifactory/api/nuget/controls-nuget/Hypertherm/mtconnect_adapter_sdk'
+
 
 jobs:
   build:
+  
+    runs-on: windows-2019
 
-    runs-on: windows-latest
+    env:
+      signtool: "'C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.17763.0\\x86\\signtool.exe'"
+      insignia: "'C:\\Program Files (x86)\\WiX Toolset v3.14\\bin\\insignia.exe'"
+      certificatePath: '.\GitHubActionsWorkflow.pfx'
+      BUILD_CONFIGURATION: Release
+      JF_URL: 'https://artifactory.hypertherm.com/artifactory'
+      JF_TOKEN: ${{ secrets.HYP_JF_TOKEN }}
+      JFROG_CLI_AVOID_NEW_VERSION_WARNING: true
 
     steps:
 
@@ -24,18 +38,21 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Setup JFrog-CLI
+      uses: jfrog/setup-jfrog-cli@v4
+
     # Use GitVersion to setup versioning for package details
     - name: Install GitVersion # From here: https://github.com/GitTools/actions
       id: install_gitversion
-      uses: gittools/actions/gitversion/setup@v0.9.9
+      uses: gittools/actions/gitversion/setup@main
       with:
-          versionSpec: '5.6.7'
+          versionSpec: '5.x'
 
     - name: Generate Version Number with GitVersion
       id: gitversion # step id used as reference for output values
-      uses: gittools/actions/gitversion/execute@v0.9.9
+      uses: gittools/actions/gitversion/execute@main
       with:
-        useConfigFile: true
+          useConfigFile: true
 
     - name: Print GitVersion computed
       id: artifactoryversion
@@ -56,6 +73,12 @@ jobs:
       id: dotnet_build
       run: dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore -p:Version="${{ steps.artifactoryversion.outputs.nuGetVersion }}"
 
+    - name: Setup .NET Core SDK
+      uses: actions/setup-dotnet@v4.0.0
+      with:
+      # Optional SDK version(s) to use. If not provided, will install global.json version when available. Examples: 2.2.104, 3.1, 3.1.x, 3.x, 6.0.2xx
+        dotnet-version:  3.1
+          
     - name: Test
       id: unit_test
       run: dotnet test --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore --no-build --verbosity normal
@@ -64,16 +87,11 @@ jobs:
       id: nuget_pack
       run: dotnet pack --configuration ${{ env.BUILD_CONFIGURATION }} -o ${{ env.NUGET_PACK_PATH }} --no-restore --no-build -p:Version=${{ steps.artifactoryversion.outputs.nuGetVersion }}
 
-    - name: Archive NuGets artifacts
-      id: archive_nugets
-      uses: actions/upload-artifact@main
-      with:
-        name: NuGet-Packages
-        path: ${{ env.NUGET_PACK_PATH }}
-
     - name: Push generated package to GitHub Packages
       id: nuget_push_github_packages
       run: |
         ls "**/*.nupkg"
         dotnet nuget add source ${{ env.NUGET_FEED }} -n hypertherm-org-github -u hypertherm -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
-        dotnet nuget push "**/*.nupkg" --source hypertherm-org-github --skip-duplicate --no-symbols true -k ${{ secrets.GITHUB_TOKEN }}
+        dotnet nuget push "**/*.nupkg" --source hypertherm-org-github --skip-duplicate --no-symbols -k ${{ secrets.GITHUB_TOKEN }}
+
+

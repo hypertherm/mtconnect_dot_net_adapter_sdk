@@ -27,9 +27,11 @@ namespace MTConnect.DataElements
     /// </summary>
     public class Condition : DataItem
     {
+        private readonly object lockObject = new object();
         /// <summary>
         /// The four values for the condition.
         /// </summary> 
+        /// 
         public enum Level
         {
             UNAVAILABLE,
@@ -367,37 +369,41 @@ namespace MTConnect.DataElements
         public override List<DataItem> ItemList(bool all = false)
         {
             List<DataItem> list = new List<DataItem>();
-            if (all) 
+            IEnumerable<Active> filteredList;
+
+            lock (lockObject)
             {
-                // Just grab all the activations.
-                foreach (Active active in mActiveList)
-                    list.Add(active);
-            }
-            else if (mSimple)
-            {
-                // For a simple condition, we are only looking for the changed set.
-                // Since we don't care about the mark and sweep, this is similar to 
-                // all other data items.
-                foreach (Active active in mActiveList)
+                if (all)
                 {
-                    if (active.Changed)
-                        list.Add(active);
+                    // If 'all' is true, include all activations.
+                    filteredList = mActiveList;
                 }
-            }
-            else if (mBegun && mPrepared)
-            {
-                if (mChanged)
+                else if (mSimple)
                 {
-                    // Find all the changed activations and add them to the list                    
-                    foreach (Active active in mActiveList)
-                    {
-                        if (active.Changed)
-                            list.Add(active);
-                    }
+                    // For a simple condition, include only the changed activations.
+                    filteredList = mActiveList.Where(active => active.Changed);
+                }
+                else if (mBegun && mPrepared && mChanged)
+                {
+                    // For non-simple conditions that have begun and are prepared, include only the changed activations.
+                    filteredList = mActiveList.Where(active => active.Changed);
+                }
+                else
+                {
+                    // If none of the above conditions are met, return an empty list.
+                    filteredList = Enumerable.Empty<Active>();
+                }
+
+                // Add the filtered activations to the list.
+                foreach (Active active in filteredList)
+                {
+                    list.Add(active);
                 }
             }
 
             return list;
         }
+
     }
+
 }
