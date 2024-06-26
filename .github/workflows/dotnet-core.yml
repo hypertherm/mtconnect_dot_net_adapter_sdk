@@ -87,23 +87,6 @@ jobs:
       id: nuget_pack
       run: dotnet pack --configuration ${{ env.BUILD_CONFIGURATION }} -o ${{ env.NUGET_PACK_PATH }} --no-restore --no-build -p:Version=${{ steps.artifactoryversion.outputs.nuGetVersion }}
 
-    - name: Archive NuGets artifacts
-      id: archive_nugets
-      uses: actions/upload-artifact@main
-      with:
-        name: NuGet-Packages
-        path: ${{ env.NUGET_PACK_PATH }}
-
-    - name: clean workspace
-      shell: bash
-      run: |
-         echo "Cleaning up previous run"
-         rm -rfv "${{ github.workspace }}"/*
-    - name: Download the package # puts files in artifact in top level
-      id: dl_nuget_artifacts
-      uses: actions/download-artifact@main
-      with:
-        name: NuGet-Packages
     - name: Push generated package to Artifactory
       id: nuget_push_artifactory
       run: |
