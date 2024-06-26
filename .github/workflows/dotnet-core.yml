@@ -8,8 +8,13 @@ on:
 
 env:
   BUILD_CONFIGURATION: 'Release'
+  DOTNET_VERSION: '3.1.x'  # set this to the dotnet version to use
+  NETFRAMEWORK_DOWNLOAD_URL: 'https://go.microsoft.com/fwlink/?linkid=2099469' # Version of NetFramework tools to use to build
+  NETFRAMEWORK_FILE_NAME: '.\netframework46_installer.exe'
   NUGET_FEED: 'https://nuget.pkg.github.com/hypertherm/index.json'
   NUGET_PACK_PATH: './nuget-output'
+  NUGET_ARTIFACTORY_FEED: 'https://artifactory.hypertherm.com/artifactory/api/nuget/controls-nuget/Hypertherm/mtconnect_adapter_sdk'
+
 
 jobs:
   build:
@@ -89,26 +94,19 @@ jobs:
         name: NuGet-Packages
         path: ${{ env.NUGET_PACK_PATH }}
 
-  # Push MSI to Artifactory
-  upload_to_artifactory: # use an interal VM to upload to artifactory
-    runs-on: [self-hosted, Windows, X64, phoenix]
-    env:
-        NUGET_ARTIFACTORY_FEED: 'https://artifactory.hypertherm.com/artifactory/api/nuget/controls-nuget/Hypertherm/mtconnect_adapter_sdk'
-
-    steps:
-      - name: clean workspace
-        shell: bash
-        run: |
-          echo "Cleaning up previous run"
-          rm -rfv "${{ github.workspace }}"/*
-      - name: Download the package # puts files in artifact in top level
-        id: dl_nuget_artifacts
-        uses: actions/download-artifact@main
-        with:
-          name: NuGet-Packages
-      - name: Push generated package to Artifactory
-        id: nuget_push_artifactory
-        run: |
-          ls "**/*.nupkg"
-          dotnet nuget push "**/*.nupkg" --source ${{ env.NUGET_ARTIFACTORY_FEED }} --skip-duplicate --no-symbols -k github-actions:${{ secrets.HYP_ARTIFACTORY_TOKEN }}
+    - name: clean workspace
+      shell: bash
+      run: |
+         echo "Cleaning up previous run"
+         rm -rfv "${{ github.workspace }}"/*
+    - name: Download the package # puts files in artifact in top level
+      id: dl_nuget_artifacts
+      uses: actions/download-artifact@main
+      with:
+        name: NuGet-Packages
+    - name: Push generated package to Artifactory
+      id: nuget_push_artifactory
+      run: |
+         ls "**/*.nupkg"
+         dotnet nuget push "**/*.nupkg" --source ${{ env.NUGET_ARTIFACTORY_FEED }} --skip-duplicate --no-symbols -k github-actions:${{ secrets.HYP_ARTIFACTORY_TOKEN }}
 
